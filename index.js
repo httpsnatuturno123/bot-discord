@@ -7,17 +7,12 @@ const app = express();
 app.use(express.json());
 
 // =============================
-// VARIÁVEIS DE AMBIENTE
+// CONFIG
 // =============================
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const API_KEY = process.env.API_KEY;
-
-if (!PORT) {
-    console.error("❌ PORT não definida pelo Railway.");
-    process.exit(1);
-}
 
 if (!DISCORD_TOKEN) {
     console.error("❌ DISCORD_TOKEN não definido.");
@@ -61,19 +56,16 @@ client.on('messageCreate', async (message) => {
         const reason = args.slice(2).join(" ") || "Sem motivo";
 
         if (!userId || isNaN(userId)) {
-            return message.reply("Informe um UserId válido.");
+            return message.reply("⚠️ Informe um UserId válido.");
         }
 
-        pendingBans.push({
-            userId,
-            reason
-        });
+        pendingBans.push({ userId, reason });
 
         console.log("📌 Ban adicionado:", userId);
 
-        message.reply(`UserId ${userId} enviado para o Roblox.`);
+        message.reply(`🚫 UserId ${userId} enviado para o Roblox.`);
     } catch (err) {
-        console.error("Erro no messageCreate:", err);
+        console.error("Erro no comando !ban:", err);
     }
 });
 
@@ -85,36 +77,35 @@ client.login(DISCORD_TOKEN).catch(err => {
 // ENDPOINTS
 // =============================
 
-// Health check (Railway precisa disso)
+// Health check
 app.get('/', (req, res) => {
-    res.send("API online.");
+    res.status(200).send("API online.");
 });
 
-// Endpoint que o Roblox usa
+// Endpoint usado pelo Roblox
 app.get('/pending-bans', (req, res) => {
     try {
         if (req.headers["x-api-key"] !== API_KEY) {
-            console.log("❌ API_KEY inválida recebida.");
+            console.log("❌ API_KEY inválida.");
             return res.status(403).json({ error: "Acesso negado" });
         }
 
-        console.log("📤 Enviando bans pendentes:", pendingBans.length);
+        console.log("📤 Enviando bans:", pendingBans.length);
 
         res.json(pendingBans);
 
         // limpa depois de enviar
         pendingBans = [];
-
     } catch (err) {
-        console.error("Erro no endpoint /pending-bans:", err);
+        console.error("Erro no endpoint:", err);
         res.status(500).json({ error: "Erro interno" });
     }
 });
 
 // =============================
-// START SERVIDOR
+// START SERVER
 // =============================
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '5.5.5.5', () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
