@@ -3,23 +3,22 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 
-console.log("==== DEBUG START ====");
-console.log("Node version:", process.version);
-console.log("DISCORD_TOKEN exists?", !!process.env.DISCORD_TOKEN);
-console.log("API_KEY exists?", !!process.env.API_KEY);
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+});
 
-if (process.env.DISCORD_TOKEN) {
-    console.log("Token preview:", process.env.DISCORD_TOKEN.slice(0, 5) + "...");
-}
-console.log("=====================");
+process.on('unhandledRejection', (err) => {
+    console.error('UNHANDLED REJECTION:', err);
+});
 
 const app = express();
+app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const API_KEY = process.env.API_KEY;
 
-let banList = [];
+let pendingBans = [];
 
 const client = new Client({
     intents: [
@@ -29,68 +28,41 @@ const client = new Client({
     ]
 });
 
-client.on('ready', () => {
+client.once('clientReady', () => {
     console.log(`✅ Bot logado como ${client.user.tag}`);
 });
 
-client.on('error', (err) => {
-    console.error("❌ Discord Client Error:", err);
-});
-
-client.on('shardError', (err) => {
-    console.error("❌ Shard Error:", err);
-});
+client.on('error', console.error);
 
 client.on('messageCreate', async (message) => {
-
-    console.log("Mensagem recebida:", message.content);
-
     if (message.author.bot) return;
-
     if (!message.content.startsWith('!ban')) return;
 
-    const args = message.content.split(" ");
+    const args = message.content.trim().split(/\s+/);
     const userId = args[1];
+    const reason = args.slice(2).join(" ") || "Sem motivo";
 
-    if (!userId) {
-        return message.reply("Informe o UserId.");
-    }
+    if (!userId) return;
 
-    if (banList.includes(userId)) {
-        return message.reply("Já está banido.");
-    }
-
-    banList.push(userId);
-
-    console.log("Ban adicionado:", userId);
-
-    message.reply(`UserId ${userId} adicionado à lista.`);
+    pendingBans.push({ userId, reason });
+    message.reply("Ban enviado para o Roblox.");
 });
 
-app.get('/bans', (req, res) => {
-
-    console.log("Requisição /bans recebida");
-    console.log("Authorization header:", req.headers.authorization);
-
-    if (req.headers.authorization !== API_KEY) {
-        console.log("❌ API_KEY inválida");
-        return res.status(403).send("Acesso negado");
-    }
-
-    console.log("✅ API_KEY válida");
-    res.json({ bans: banList });
+app.get('/', (req, res) => {
+    res.send("API online.");
 });
 
-(async () => {
-    try {
-        console.log("Tentando logar no Discord...");
-        await client.login(DISCORD_TOKEN);
-        console.log("Login executado.");
-    } catch (err) {
-        console.error("❌ ERRO AO LOGAR:", err);
+app.get('/pending-bans', (req, res) => {
+    if (req.headers["x-api-key"] !== API_KEY) {
+        return res.status(403).json({ error: "Acesso negado" });
     }
-})();
 
-app.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
+    res.json(pendingBans);
+    pendingBans = [];
 });
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+});
+
+client.login(DISCORD_TOKEN).catch(console.error);
