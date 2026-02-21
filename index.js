@@ -3,22 +3,41 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
 
-process.on('uncaughtException', (err) => {
-    console.error('UNCAUGHT EXCEPTION:', err);
-});
-
-process.on('unhandledRejection', (err) => {
-    console.error('UNHANDLED REJECTION:', err);
-});
-
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+// =============================
+// VARIÁVEIS DE AMBIENTE
+// =============================
+
+const PORT = process.env.PORT;
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 const API_KEY = process.env.API_KEY;
 
+if (!PORT) {
+    console.error("❌ PORT não definida pelo Railway.");
+    process.exit(1);
+}
+
+if (!DISCORD_TOKEN) {
+    console.error("❌ DISCORD_TOKEN não definido.");
+    process.exit(1);
+}
+
+if (!API_KEY) {
+    console.error("❌ API_KEY não definida.");
+    process.exit(1);
+}
+
+// =============================
+// SISTEMA DE BAN
+// =============================
+
 let pendingBans = [];
+
+// =============================
+// DISCORD BOT
+// =============================
 
 const client = new Client({
     intents: [
@@ -28,41 +47,74 @@ const client = new Client({
     ]
 });
 
-client.once('clientReady', () => {
+client.once('ready', () => {
     console.log(`✅ Bot logado como ${client.user.tag}`);
 });
 
-client.on('error', console.error);
-
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-    if (!message.content.startsWith('!ban')) return;
+    try {
+        if (message.author.bot) return;
+        if (!message.content.startsWith('!ban')) return;
 
-    const args = message.content.trim().split(/\s+/);
-    const userId = args[1];
-    const reason = args.slice(2).join(" ") || "Sem motivo";
+        const args = message.content.trim().split(/\s+/);
+        const userId = args[1];
+        const reason = args.slice(2).join(" ") || "Sem motivo";
 
-    if (!userId) return;
+        if (!userId || isNaN(userId)) {
+            return message.reply("Informe um UserId válido.");
+        }
 
-    pendingBans.push({ userId, reason });
-    message.reply("Ban enviado para o Roblox.");
+        pendingBans.push({
+            userId,
+            reason
+        });
+
+        console.log("📌 Ban adicionado:", userId);
+
+        message.reply(`UserId ${userId} enviado para o Roblox.`);
+    } catch (err) {
+        console.error("Erro no messageCreate:", err);
+    }
 });
 
+client.login(DISCORD_TOKEN).catch(err => {
+    console.error("❌ Erro ao logar no Discord:", err);
+});
+
+// =============================
+// ENDPOINTS
+// =============================
+
+// Health check (Railway precisa disso)
 app.get('/', (req, res) => {
     res.send("API online.");
 });
 
+// Endpoint que o Roblox usa
 app.get('/pending-bans', (req, res) => {
-    if (req.headers["x-api-key"] !== API_KEY) {
-        return res.status(403).json({ error: "Acesso negado" });
-    }
+    try {
+        if (req.headers["x-api-key"] !== API_KEY) {
+            console.log("❌ API_KEY inválida recebida.");
+            return res.status(403).json({ error: "Acesso negado" });
+        }
 
-    res.json(pendingBans);
-    pendingBans = [];
+        console.log("📤 Enviando bans pendentes:", pendingBans.length);
+
+        res.json(pendingBans);
+
+        // limpa depois de enviar
+        pendingBans = [];
+
+    } catch (err) {
+        console.error("Erro no endpoint /pending-bans:", err);
+        res.status(500).json({ error: "Erro interno" });
+    }
 });
+
+// =============================
+// START SERVIDOR
+// =============================
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
-
-client.login(DISCORD_TOKEN).catch(console.error);
