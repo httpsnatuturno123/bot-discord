@@ -106,6 +106,6 @@ app.get('/pending-bans', (req, res) => {
 // START SERVER
 // =============================
 
-app.listen(PORT, '5.5.5.5', () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });
