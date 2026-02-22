@@ -14,7 +14,17 @@ class Database {
                     reason TEXT
                 );
             `);
-            console.log("✅ Banco de Dados: Tabela 'pending_bans' pronta.");
+            
+            await this.pool.query(`
+                CREATE TABLE IF NOT EXISTS game_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    action TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );`
+            );
+
+            console.log("✅ Banco de Dados: Tabela 'pending_bans' e 'game_logs' pronta.");
         } catch (error) {
             console.error("❌ Erro ao inicializar o banco:", error);
         }
@@ -34,6 +44,13 @@ class Database {
         }
         return rows;
     }
+
+    async addGameLog(userId, action) {
+    await this.pool.query(
+        'INSERT INTO game_logs (user_id, action) VALUES (?, ?)',
+        [userId, action]
+    );
+}
 }
 
 module.exports = Database;

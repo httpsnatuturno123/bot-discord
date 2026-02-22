@@ -32,6 +32,36 @@ class ApiServer {
                 res.status(500).json({ error: "Erro interno" });
             }
         });
+
+        // NOVA ROTA POST: O Roblox vai enviar dados para cá
+        this.app.post('/logs', async (req, res) => {
+            try {
+                // 1. Verifica a segurança (API KEY)
+                if (req.headers["x-api-key"] !== this.apiKey) {
+                    return res.status(403).json({ error: "Acesso negado" });
+                }
+
+                // 2. Extrai os dados que o Roblox enviou no "corpo" (body) da requisição
+                const { userId, action } = req.body;
+
+                if (!userId || !action) {
+                    return res.status(400).json({ error: "Faltam parâmetros (userId ou action)" });
+                }
+
+                // 3. Salva no banco de dados
+                await this.db.addGameLog(userId, action);
+                
+                console.log(`📥 API: Log recebido do Roblox -> Usuário ${userId} fez: ${action}`);
+                
+                // 4. Responde ao Roblox que deu tudo certo
+                res.status(201).json({ message: "Log salvo com sucesso!" });
+
+            } catch (err) {
+                console.error("❌ Erro no POST /logs:", err);
+                res.status(500).json({ error: "Erro interno do servidor" });
+            }
+        });
+
     }
 
     start() {
