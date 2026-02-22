@@ -69,8 +69,8 @@ async function handleRequererRecrutamento(interaction, ceobDb) {
             motivo
         });
 
-        // 6. Constrói a embed de confirmação de envio
-        const embed = {
+        // 6. Constrói a embed de confirmação de envio para o usuário
+        const embedUsuario = {
             title: `📋 Requerimento de Recrutamento Enviado`,
             description: `Seu requerimento foi submetido com sucesso e será analisado pela **DGP**.`,
             color: 0xE9C46A, // Amarelo PENDENTE
@@ -85,15 +85,55 @@ async function handleRequererRecrutamento(interaction, ceobDb) {
             timestamp: new Date()
         };
 
-        await interaction.editReply({ embeds: [embed] });
+        await interaction.editReply({ embeds: [embedUsuario] });
 
+        // 7. Envia a embed interativa para o canal de Requerimentos da DGP
+        const canalRequerimentosId = process.env.CANAL_REQUERIMENTOS_ID;
+        if (canalRequerimentosId) {
+            try {
+                const canalDeRequs = await interaction.client.channels.fetch(canalRequerimentosId);
+
+                const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
+                const botoes = new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`req_aprovar_${resultado.requerimentoId}`)
+                        .setLabel('Aprovar')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('✅'),
+                    new ButtonBuilder()
+                        .setCustomId(`req_recusar_${resultado.requerimentoId}`)
+                        .setLabel('Indeferir')
+                        .setStyle(ButtonStyle.Danger)
+                        .setEmoji('❌')
+                );
+
+                const embedDGP = {
+                    title: `📥 Novo Requerimento — Protocolo #${resultado.requerimentoId}`,
+                    description: `**Solicitante:** <@${executorDiscordId}> (${executorMilitar.patente_abrev} ${executorMilitar.nome_guerra})\n**Tipo:** REGISTRO / RECRUTAMENTO`,
+                    color: 0xE9C46A,
+                    fields: [
+                        { name: '🎖️ Recruta (Alvo)', value: `**${nomeGuerra}**`, inline: true },
+                        { name: '🎮 Roblox', value: `${robloxUsername} (ID: ${robloxId})`, inline: true },
+                        { name: '🏛️ OM Solicitada', value: `${omSigla}`, inline: true },
+                        { name: '📝 Motivo', value: motivo, inline: false }
+                    ],
+                    footer: { text: 'Pendente de análise' },
+                    timestamp: new Date()
+                };
+
+                await canalDeRequs.send({ embeds: [embedDGP], components: [botoes] });
+            } catch (err) {
+                console.error('❌ Erro ao enviar mensagem para o canal de requerimentos da DGP:', err);
+            }
+        }
     } catch (error) {
         console.error('Erro no requerimento de recrutamento:', error);
 
-        if (error.message.includes('OM')) {
+        if (error.message.includes('OM') || error.message.includes('Patente')) {
             return interaction.editReply(`❌ ${error.message}`);
         } else if (error.code === '23505') {
-            return interaction.editReply('❌ **Erro**: Este Roblox ID, Usuário do Discord ou Nome já está vinculado a outro militar no sistema.');
+            return interaction.editReply('❌ **Erro**: Este Roblox ID, Usuário do Discord ou Nome de Guerra já está vinculado a outro militar no sistema.');
         }
 
         interaction.editReply('❌ Ocorreu um erro interno ao processar seu requerimento.');
