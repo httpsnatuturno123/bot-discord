@@ -24,9 +24,9 @@ class Database {
                 );`
             );
 
-            console.log("✅ Banco de Dados: Tabela 'pending_bans' e 'game_logs' pronta.");
+            console.log("✅ Legado: Tabelas 'pending_bans' e 'game_logs' prontas.");
         } catch (error) {
-            console.error("❌ Erro ao inicializar o banco:", error);
+            console.error("❌ Legado: Erro ao inicializar o banco:", error);
         }
     }
 
@@ -46,11 +46,11 @@ class Database {
     }
 
     async addGameLog(userId, action) {
-    await this.pool.query(
-        'INSERT INTO game_logs (user_id, action) VALUES (?, ?)',
-        [userId, action]
-    );
-}
+        await this.pool.query(
+            'INSERT INTO game_logs (user_id, action) VALUES (?, ?)',
+            [userId, action]
+        );
+    }
 }
 
 module.exports = Database;
