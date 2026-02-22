@@ -10,6 +10,7 @@ const handleOMs = require('./commands/handleOMs');
 const handleEfetivo = require('./commands/handleEfetivo');
 const handleMinhaPerfil = require('./commands/handleMinhaPerfil');
 const handleListarRecrutamento = require('./commands/handleListarRecrutamento');
+const handleRequererRecrutamento = require('./commands/handleRequererRecrutamento');
 
 // Handler legado (prefixo)
 const handleBanLegado = require('./commands/handleBanLegado');
@@ -64,12 +65,13 @@ class DiscordBot {
     // ────────────────────────────────────────────────────
     getCommandMap() {
         return {
-            'ficha':               (i) => handleFicha(i, this.ceobDb),
-            'patentes':            (i) => handlePatentes(i, this.ceobDb),
-            'oms':                 (i) => handleOMs(i, this.ceobDb),
-            'efetivo':             (i) => handleEfetivo(i, this.ceobDb),
-            'minhaperfil':         (i) => handleMinhaPerfil(i, this.ceobDb),
+            'ficha': (i) => handleFicha(i, this.ceobDb),
+            'patentes': (i) => handlePatentes(i, this.ceobDb),
+            'oms': (i) => handleOMs(i, this.ceobDb),
+            'efetivo': (i) => handleEfetivo(i, this.ceobDb),
+            'minhaperfil': (i) => handleMinhaPerfil(i, this.ceobDb),
             'listar_recrutamento': (i) => handleListarRecrutamento(i, this.ceobDb),
+            'requerer_recrutamento': (i) => handleRequererRecrutamento(i, this.ceobDb),
         };
     }
 

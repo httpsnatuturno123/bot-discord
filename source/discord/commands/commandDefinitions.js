@@ -64,6 +64,35 @@ function getSlashCommands() {
                     .setDescription('Usuário do Discord (Opcional, porém recomendado)')
                     .setRequired(false)
             ),
+
+        new SlashCommandBuilder()
+            .setName('requerer_recrutamento')
+            .setDescription('Solicitação de ingresso de um recruta, para verificação do DGP (Patente >= Cabo)')
+            .addStringOption(opt =>
+                opt.setName('nome_guerra')
+                    .setDescription('Nome de Guerra do recruta')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('roblox_id')
+                    .setDescription('ID da conta do Roblox (Apenas números)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('om')
+                    .setDescription('Sigla da OM de destino (ex: 1º BI, PE)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('motivo')
+                    .setDescription('Motivo/Informação adicional da solicitação (Opcional)')
+                    .setRequired(false)
+            )
+            .addUserOption(opt =>
+                opt.setName('usuario')
+                    .setDescription('Usuário do Discord (Opcional, porém recomendado)')
+                    .setRequired(false)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 

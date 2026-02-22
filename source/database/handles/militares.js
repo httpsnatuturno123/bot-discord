@@ -55,6 +55,16 @@ class MilitaresHandle {
         );
         return rows[0];
     }
+    async criarInativo({ nomeGuerra, robloxUserId, robloxUsername, discordUserId, patenteId, omLotacaoId }) {
+        const { rows } = await this.connection.query(
+            `INSERT INTO ceob.militares
+                (nome_guerra, roblox_user_id, roblox_username, discord_user_id, patente_id, om_lotacao_id, ativo)
+             VALUES ($1, $2, $3, $4, $5, $6, false)
+             RETURNING *`,
+            [nomeGuerra, robloxUserId, robloxUsername || null, discordUserId || null, patenteId, omLotacaoId]
+        );
+        return rows[0];
+    }
 }
 
 module.exports = MilitaresHandle;
