@@ -4,7 +4,7 @@
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handleOMs(interaction, ceobDb) {
-    const oms = await ceobDb.getOMs();
+    const oms = await ceobDb.organizacoes.getAll();
 
     let desc = '';
     for (const om of oms) {

@@ -5,7 +5,7 @@
  */
 async function handleEfetivo(interaction, ceobDb) {
     const sigla = interaction.options.getString('sigla').toUpperCase();
-    const om = await ceobDb.getOMBySigla(sigla);
+    const om = await ceobDb.organizacoes.getBySigla(sigla);
 
     if (!om) {
         return interaction.reply({ content: `❌ OM com sigla "${sigla}" não encontrada.`, ephemeral: true });
