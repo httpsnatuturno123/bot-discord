@@ -8,13 +8,13 @@ const buildFichaEmbed = require('../helpers/buildFichaEmbed');
 async function handleMinhaPerfil(interaction, ceobDb) {
     await interaction.deferReply({ ephemeral: true });
 
-    const militar = await ceobDb.getMilitarByDiscord(interaction.user.id);
+    const militar = await ceobDb.militares.getByDiscord(interaction.user.id);
 
     if (!militar) {
         return interaction.editReply('❌ Você não possui cadastro no CEOB. Solicite seu registro a um superior.');
     }
 
-    const ficha = await ceobDb.getFichaCompleta(militar.id);
+    const ficha = await ceobDb.ficha.getCompleta(militar.id);
     const embed = buildFichaEmbed(ficha);
     await interaction.editReply({ embeds: [embed] });
 }

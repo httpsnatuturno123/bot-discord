@@ -11,7 +11,7 @@ async function handleEfetivo(interaction, ceobDb) {
         return interaction.reply({ content: `❌ OM com sigla "${sigla}" não encontrada.`, ephemeral: true });
     }
 
-    const efetivo = await ceobDb.getEfetivoOM(om.id);
+    const efetivo = await ceobDb.organizacoes.getEfetivo(om.id);
     const max = om.efetivo_maximo ? ` / ${om.efetivo_maximo}` : '';
 
     await interaction.reply({

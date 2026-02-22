@@ -14,9 +14,9 @@ async function handleFicha(interaction, ceobDb) {
     let militar = null;
 
     if (matricula) {
-        militar = await ceobDb.getMilitarByMatricula(matricula);
+        militar = await ceobDb.militares.getByMatricula(matricula);
     } else if (usuario) {
-        militar = await ceobDb.getMilitarByDiscord(usuario.id);
+        militar = await ceobDb.militares.getByDiscord(usuario.id);
     } else {
         return interaction.editReply('⚠️ Informe uma matrícula ou selecione um usuário.');
     }
@@ -25,7 +25,7 @@ async function handleFicha(interaction, ceobDb) {
         return interaction.editReply('❌ Militar não encontrado.');
     }
 
-    const ficha = await ceobDb.getFichaCompleta(militar.id);
+    const ficha = await ceobDb.ficha.getCompleta(militar.id);
     const embed = buildFichaEmbed(ficha);
     await interaction.editReply({ embeds: [embed] });
 }

@@ -4,7 +4,7 @@
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handlePatentes(interaction, ceobDb) {
-    const patentes = await ceobDb.getPatentes();
+    const patentes = await ceobDb.patentes.getAll();
 
     let desc = '';
     let currentCirculo = '';

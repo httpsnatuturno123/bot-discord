@@ -8,15 +8,15 @@ async function handleListarRecrutamento(interaction, ceobDb) {
 
     // 1. Identifica e valida o executor do comando
     const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.getMilitarByDiscord(executorDiscordId);
+    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
 
     if (!executorMilitar) {
         return interaction.editReply('❌ Você não possui cadastro no sistema e não tem permissão para listar recrutas.');
     }
 
     // 2. Verifica se o usuário tem permissão para usar (DGP ou Alto Comando)
-    const pertenceDGP = await ceobDb.pertenceAoOrgao(executorMilitar.id, 'DGP');
-    const isAltoComando = await ceobDb.isAltoComando(executorMilitar.id);
+    const pertenceDGP = await ceobDb.permissoes.pertenceAoOrgao(executorMilitar.id, 'DGP');
+    const isAltoComando = await ceobDb.permissoes.isAltoComando(executorMilitar.id);
 
     if (!pertenceDGP && !isAltoComando) {
         return interaction.editReply('❌ **Permissão Negada**: Apenas membros alocados na DGP ou no Alto Comando podem realizar listagens de recrutamento diretas.');
@@ -56,7 +56,7 @@ async function handleListarRecrutamento(interaction, ceobDb) {
 
     // 4. Executa a inserção múltipla no banco (Transação)
     try {
-        const resultado = await ceobDb.executarListagemRecrutamento({
+        const resultado = await ceobDb.listagem.executarRecrutamento({
             executadoPorId: executorMilitar.id,
             robloxId,
             robloxUsername,
