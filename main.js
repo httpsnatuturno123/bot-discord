@@ -1,8 +1,8 @@
 require('dotenv').config();
 
-const Database = require('./src/Database');
-const ApiServer = require('./src/ApiServer');
-const DiscordBot = require('./src/DiscordBot');
+const Database = require('./source/Database');
+const ApiServer = require('./source/ApiServer');
+const DiscordBot = require('./source/DiscordBot');
 
 // Verifica variáveis críticas
 if (!process.env.DISCORD_TOKEN || !process.env.API_KEY || !process.env.DATABASE_URL) {
