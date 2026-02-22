@@ -9,7 +9,8 @@ class CeobDatabase {
             ssl: process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false }
         });
 
-        this.schemaDir = path.join(__dirname, 'schema');
+        // Ajustado: agora estamos em source/database/, schema está em source/schema/
+        this.schemaDir = path.join(__dirname, '..', 'schema');
     }
 
     // ────────────────────────────────────────────────────
@@ -59,9 +60,6 @@ class CeobDatabase {
     // MILITARES
     // ────────────────────────────────────────────────────
 
-    /**
-     * Busca militar por Discord ID
-     */
     async getMilitarByDiscord(discordUserId) {
         const { rows } = await this.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
@@ -76,9 +74,6 @@ class CeobDatabase {
         return rows[0] || null;
     }
 
-    /**
-     * Busca militar por Roblox User ID
-     */
     async getMilitarByRoblox(robloxUserId) {
         const { rows } = await this.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
@@ -93,9 +88,6 @@ class CeobDatabase {
         return rows[0] || null;
     }
 
-    /**
-     * Busca militar por matrícula
-     */
     async getMilitarByMatricula(matricula) {
         const { rows } = await this.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
@@ -110,10 +102,6 @@ class CeobDatabase {
         return rows[0] || null;
     }
 
-    /**
-     * Cria um novo militar (matrícula gerada automaticamente pelo trigger)
-     * Retorna o militar criado com matrícula
-     */
     async criarMilitar({ nomeGuerra, robloxUserId, robloxUsername, discordUserId, patenteId, omLotacaoId }) {
         const { rows } = await this.query(
             `INSERT INTO ceob.militares
@@ -144,9 +132,6 @@ class CeobDatabase {
         return rows[0] || null;
     }
 
-    /**
-     * Retorna a patente de ingresso padrão (Soldado-Recruta)
-     */
     async getPatenteIngresso() {
         const { rows } = await this.query(
             `SELECT * FROM ceob.patentes WHERE abreviacao = 'REC' AND ativo = true`
@@ -173,9 +158,6 @@ class CeobDatabase {
         return rows[0] || null;
     }
 
-    /**
-     * Retorna efetivo atual de uma OM (militares ativos lotados)
-     */
     async getEfetivoOM(omId) {
         const { rows } = await this.query(
             `SELECT COUNT(*) AS total FROM ceob.militares
@@ -311,26 +293,23 @@ class CeobDatabase {
     // ────────────────────────────────────────────────────
     async executarListagemRecrutamento({ executadoPorId, robloxId, robloxUsername, nomeGuerra, omSigla, discordId }) {
         const client = await this.pool.connect();
-        
-        try {
-            await client.query('BEGIN'); // Inicia a transação
 
-            // 1. Obter ID da patente de Recruta
+        try {
+            await client.query('BEGIN');
+
             const { rows: patenteRows } = await client.query(
                 `SELECT id FROM ceob.patentes WHERE abreviacao = 'REC'`
             );
             if (!patenteRows.length) throw new Error('Patente REC não encontrada no banco.');
             const patenteId = patenteRows[0].id;
 
-            // 2. Obter ID da OM de lotação
             const { rows: omRows } = await client.query(
-                `SELECT id, nome FROM ceob.organizacoes_militares WHERE sigla = $1`, 
+                `SELECT id, nome FROM ceob.organizacoes_militares WHERE sigla = $1`,
                 [omSigla]
             );
             if (!omRows.length) throw new Error(`OM com sigla "${omSigla}" não encontrada.`);
             const omId = omRows[0].id;
 
-            // 3. Criar o Militar na tabela central (agora incluindo o roblox_username)
             const { rows: militarRows } = await client.query(
                 `INSERT INTO ceob.militares (nome_guerra, roblox_user_id, roblox_username, discord_user_id, patente_id, om_lotacao_id)
                  VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
@@ -338,7 +317,6 @@ class CeobDatabase {
             );
             const novoMilitar = militarRows[0];
 
-            // 4. Criar o Requerimento já aprovado (is_listagem = true)
             const { rows: reqRows } = await client.query(
                 `INSERT INTO ceob.requerimentos (tipo, solicitante_id, militar_alvo_id, status, motivo_solicitacao, is_listagem)
                  VALUES ('LISTAGEM_REGISTRO', $1, $2, 'APROVADO', 'Listagem direta (DGP/Alto Comando)', true) RETURNING *`,
@@ -346,7 +324,6 @@ class CeobDatabase {
             );
             const requerimentoId = reqRows[0].id;
 
-            // 5. Registrar na Timeline de Eventos
             const dadosExtras = JSON.stringify({ patente_inicial: 'REC', om_inicial: omSigla });
             const { rows: timelineRows } = await client.query(
                 `INSERT INTO ceob.timeline_eventos (militar_id, tipo_evento, descricao, executado_por_id, om_contexto_id, dados_extras)
@@ -355,13 +332,11 @@ class CeobDatabase {
             );
             const timelineId = timelineRows[0].id;
 
-            // Atualiza requerimento com a chave da timeline gerada
             await client.query(
-                `UPDATE ceob.requerimentos SET timeline_evento_id = $1 WHERE id = $2`, 
+                `UPDATE ceob.requerimentos SET timeline_evento_id = $1 WHERE id = $2`,
                 [timelineId, requerimentoId]
             );
 
-            // 6. Gerar publicação para o Boletim Eletrônico
             const { rows: numRows } = await client.query(`SELECT ceob.gerar_numero_boletim() AS numero`);
             const boletimNumero = numRows[0].numero;
             const boletimConteudo = `**INGRESSO NO CEOB**\nO recruta **${nomeGuerra}** foi integrado à instituição e matriculado nas fileiras da OM **${omSigla}**.`;
@@ -372,15 +347,15 @@ class CeobDatabase {
                 [boletimNumero, boletimConteudo, requerimentoId, timelineId]
             );
 
-            await client.query('COMMIT'); // Confirma todas as alterações
-            
-            return { 
-                militar: novoMilitar, 
-                boletim: boletimRows[0] 
+            await client.query('COMMIT');
+
+            return {
+                militar: novoMilitar,
+                boletim: boletimRows[0]
             };
-            
+
         } catch (error) {
-            await client.query('ROLLBACK'); // Desfaz tudo se houver erro
+            await client.query('ROLLBACK');
             throw error;
         } finally {
             client.release();
@@ -407,7 +382,6 @@ class CeobDatabase {
     // ────────────────────────────────────────────────────
 
     async criarBoletim({ conteudo, requerimentoId, timelineEventoId, discordMessageId }) {
-        // Gera número automático via função do banco
         const { rows: numRows } = await this.query(`SELECT ceob.gerar_numero_boletim() AS numero`);
         const numero = numRows[0].numero;
 
@@ -422,12 +396,9 @@ class CeobDatabase {
     }
 
     // ────────────────────────────────────────────────────
-    // VERIFICAÇÕES DE PERMISSÃO (Passo 2 usará mais)
+    // VERIFICAÇÕES DE PERMISSÃO
     // ────────────────────────────────────────────────────
 
-    /**
-     * Verifica se o militar tem patente >= Coronel (Alto Comando)
-     */
     async isAltoComando(militarId) {
         const { rows } = await this.query(
             `SELECT p.ordem_precedencia <= 5 AS is_alto_comando
@@ -439,9 +410,6 @@ class CeobDatabase {
         return rows[0]?.is_alto_comando || false;
     }
 
-    /**
-     * Verifica se o militar tem patente > Cabo (pode solicitar registro)
-     */
     async podeRequisitarRegistro(militarId) {
         const { rows } = await this.query(
             `SELECT p.ordem_precedencia < 20 AS pode
@@ -453,9 +421,6 @@ class CeobDatabase {
         return rows[0]?.pode || false;
     }
 
-    /**
-     * Verifica se o militar pertence a um órgão específico (por sigla)
-     */
     async pertenceAoOrgao(militarId, siglasOrgao) {
         const siglas = Array.isArray(siglasOrgao) ? siglasOrgao : [siglasOrgao];
         const { rows } = await this.query(

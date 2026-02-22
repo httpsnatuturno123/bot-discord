@@ -1,9 +1,9 @@
 require('dotenv').config();
 
-const Database = require('./source/Database');
-const CeobDatabase = require('./source/CeobDatabase');
-const ApiServer = require('./source/ApiServer');
-const DiscordBot = require('./source/DiscordBot');
+const Database = require('./source/database/Database');
+const CeobDatabase = require('./source/database/CeobDatabase');
+const ApiServer = require('./source/api/ApiServer');
+const DiscordBot = require('./source/discord/DiscordBot');
 
 // Verifica variáveis críticas
 const requiredVars = ['DISCORD_TOKEN', 'API_KEY', 'DATABASE_URL'];

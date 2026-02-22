@@ -6,7 +6,7 @@ class ApiServer {
         this.apiKey = apiKey;
         this.db = db;
         this.app = express();
-        
+
         this.app.use(express.json());
         this.setupRoutes();
     }
@@ -54,9 +54,9 @@ class ApiServer {
                 }
 
                 await this.db.addGameLog(userId, action);
-                
+
                 console.log(`📥 API: Log recebido do Roblox -> Usuário ${userId} fez: ${action}`);
-                
+
                 res.status(201).json({ message: "Log salvo com sucesso!" });
 
             } catch (err) {

@@ -14,7 +14,7 @@ class Database {
                     reason TEXT
                 );
             `);
-            
+
             await this.pool.query(`
                 CREATE TABLE IF NOT EXISTS game_logs (
                     id INT AUTO_INCREMENT PRIMARY KEY,
