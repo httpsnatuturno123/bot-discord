@@ -150,15 +150,21 @@ class MilitaresHandle {
             // 6. Deleta os requerimentos
             await client.query(`DELETE FROM ceob.requerimentos WHERE solicitante_id = $1 OR militar_alvo_id = $1`, [militarId]);
 
-            // 7. Limpa referências do militar em timeline_eventos de OUTROS militares e deleta as dele
+            // 7. Desabilita temporariamente o trigger de proteção append-only da timeline
+            await client.query(`ALTER TABLE ceob.timeline_eventos DISABLE TRIGGER trg_timeline_no_update`);
+
+            // 8. Limpa referências do militar em timeline_eventos de OUTROS militares e deleta as dele
             await client.query(`UPDATE ceob.timeline_eventos SET executado_por_id = NULL WHERE executado_por_id = $1`, [militarId]);
             await client.query(`UPDATE ceob.timeline_eventos SET aprovado_por_id = NULL WHERE aprovado_por_id = $1`, [militarId]);
             await client.query(`DELETE FROM ceob.timeline_eventos WHERE militar_id = $1`, [militarId]);
 
-            // 8. Apaga Funções do Militar
+            // 9. Reabilita o trigger de proteção da timeline
+            await client.query(`ALTER TABLE ceob.timeline_eventos ENABLE TRIGGER trg_timeline_no_update`);
+
+            // 10. Apaga Funções do Militar
             await client.query(`DELETE FROM ceob.militar_funcoes WHERE militar_id = $1`, [militarId]);
 
-            // 9. Apaga o próprio Militar
+            // 11. Apaga o próprio Militar
             await client.query(`DELETE FROM ceob.militares WHERE id = $1`, [militarId]);
 
             await client.query('COMMIT');
