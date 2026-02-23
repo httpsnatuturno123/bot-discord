@@ -12,6 +12,7 @@ const BoletimHandle = require('./handles/boletim');
 const PermissoesHandle = require('./handles/permissoes');
 const FichaHandle = require('./handles/ficha');
 const RequerimentoRecrutamentoHandle = require('./handles/requerimentoRecrutamento');
+const RequerimentoListagemHandle = require('./handles/requerimentoListagem');
 
 class CeobDatabase {
     constructor(databaseUrl) {
@@ -29,6 +30,7 @@ class CeobDatabase {
         this.permissoes = new PermissoesHandle(this.connection);
         this.ficha = new FichaHandle(this.connection, this.funcoes, this.timeline);
         this.requerimentoRecrutamento = new RequerimentoRecrutamentoHandle(this.connection);
+        this.requerimentoListagem = new RequerimentoListagemHandle(this.connection);
     }
 
     async init() {

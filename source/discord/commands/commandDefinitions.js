@@ -145,6 +145,30 @@ function getSlashCommands() {
                     .setDescription('Username/Nick da conta do Roblox')
                     .setRequired(false)
             ),
+
+        new SlashCommandBuilder()
+            .setName('requerimento_listagem')
+            .setDescription('Solicita o próprio ingresso no CEOB (Para usuários não listados)')
+            .addStringOption(opt =>
+                opt.setName('roblox_username')
+                    .setDescription('Seu Username (Nick) exato no Roblox')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('nome_guerra')
+                    .setDescription('O Nome de Guerra que você irá utilizar')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('patente')
+                    .setDescription('Abreviação da patente solicitada (ex: SD, CB, 3 SGT)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('om')
+                    .setDescription('Sigla da OM desejada (ex: PE, 1º BI, COTER)')
+                    .setRequired(true)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 
