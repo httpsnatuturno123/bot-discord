@@ -208,6 +208,15 @@ function getSlashCommands() {
                     .setDescription('Descrição da OM (Opcional)')
                     .setRequired(false)
             ),
+
+        new SlashCommandBuilder()
+            .setName('deletar_om')
+            .setDescription('Deleta (desativa) uma Organização Militar. APENAS MEMBROS DO COMANDO SUPREMO.')
+            .addStringOption(opt =>
+                opt.setName('sigla')
+                    .setDescription('Sigla da OM a ser deletada (ex: 5º BIL)')
+                    .setRequired(true)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 
