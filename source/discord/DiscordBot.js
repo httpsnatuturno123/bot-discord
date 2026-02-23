@@ -181,13 +181,18 @@ class DiscordBot {
                         }
 
                         // Cria evento na Timeline
+                        // Se APROVADO: registra no ALVO (que será ativado)
+                        // Se INDEFERIDO: registra no SOLICITANTE (o alvo será apagado)
                         const tipoEvento = isAprovacao ? 'INGRESSO' : 'OBSERVACAO';
+                        const timelineMilitarId = isAprovacao
+                            ? reqAtualizado.militar_alvo_id
+                            : reqAtualizado.solicitante_id;
                         const descricaoTimeline = isAprovacao
                             ? `Ingresso no CEOB aprovado via Requerimento #${requerimentoId}. Justificativa: ${motivoDecisao}`
-                            : `Requerimento de Ingresso #${requerimentoId} indeferido. Motivo: ${motivoDecisao}`;
+                            : `Requerimento de recrutamento #${requerimentoId} para "${nomeMilitarAlvo}" foi indeferido. Motivo: ${motivoDecisao}`;
 
                         const timelineEvento = await this.ceobDb.timeline.registrarEvento({
-                            militarId: reqAtualizado.militar_alvo_id,
+                            militarId: timelineMilitarId,
                             tipoEvento,
                             descricao: descricaoTimeline,
                             executadoPorId: analistaMilitar.id,
@@ -266,9 +271,28 @@ class DiscordBot {
 
                         await interaction.message.edit({ embeds: [embedAtualizado], components: [] });
 
+                        // Se INDEFERIDO: limpa o militar fantasma (inativo) do banco
+                        // para liberar o roblox_id para futuras tentativas de recrutamento
+                        if (!isAprovacao && reqAtualizado.militar_alvo_id) {
+                            try {
+                                // Desvincula o militar alvo do requerimento (preserva o registro histórico)
+                                await this.ceobDb.connection.query(
+                                    `UPDATE ceob.requerimentos SET militar_alvo_id = NULL WHERE id = $1`,
+                                    [requerimentoId]
+                                );
+                                // Apaga o registro fantasma do militar inativo
+                                await this.ceobDb.connection.query(
+                                    `DELETE FROM ceob.militares WHERE id = $1 AND ativo = false`,
+                                    [reqAtualizado.militar_alvo_id]
+                                );
+                            } catch (errLimpeza) {
+                                console.error('⚠️ Erro ao limpar militar inativo após indeferimento:', errLimpeza);
+                            }
+                        }
+
                         const msgConfirmacao = isAprovacao
                             ? `✅ Requerimento **#${requerimentoId}** aprovado. O militar foi ativado e o boletim **${boletim.numero}** foi publicado.`
-                            : `❌ Requerimento **#${requerimentoId}** indeferido. O boletim **${boletim.numero}** foi publicado.`;
+                            : `❌ Requerimento **#${requerimentoId}** indeferido. O registro pendente foi removido e o boletim **${boletim.numero}** foi publicado.`;
 
                         await interaction.editReply(msgConfirmacao);
                     } catch (err) {
