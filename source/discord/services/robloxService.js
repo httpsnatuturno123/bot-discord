@@ -125,9 +125,25 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
             // 1. Buscar menor role viável
             const roleId = await buscarMenorRole(groupId);
 
-            // 2. Tentar aceitar/setar role no grupo via Open Cloud API
+            // 1. Opcional: Tentar aceitar a requisição de entrada (se estiver pendente)
+            try {
+                await fetch(
+                    `https://apis.roblox.com/cloud/v2/groups/${groupId}/join-requests/${robloxUserId}:accept`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': apiKey
+                        }
+                    }
+                );
+            } catch (ignoreErr) {
+                // Se falhar (ex: usuário já está no grupo), podemos apenas ignorar
+            }
+
+            // 2. Tentar setar role no grupo via Open Cloud API (corrigido a URL)
             const response = await fetch(
-                `https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships`,
+                `https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships/${robloxUserId}`,
                 {
                     method: 'PATCH',
                     headers: {
@@ -135,7 +151,6 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
                         'x-api-key': apiKey
                     },
                     body: JSON.stringify({
-                        user: `users/${robloxUserId}`,
                         role: `groups/${groupId}/roles/${roleId}`
                     })
                 }
