@@ -29,6 +29,10 @@ function getSlashCommands() {
             .setDescription('Lista todas as Organizações Militares ativas'),
 
         new SlashCommandBuilder()
+            .setName('listagem')
+            .setDescription('Retorna uma lista de todos os membros ATIVOS'),
+
+        new SlashCommandBuilder()
             .setName('efetivo')
             .setDescription('Mostra o efetivo de uma OM')
             .addStringOption(opt =>
