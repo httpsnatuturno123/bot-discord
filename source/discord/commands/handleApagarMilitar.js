@@ -33,9 +33,13 @@ async function handleApagarMilitar(interaction, ceobDb) {
 
     if (robloxId) {
         if (isNaN(robloxId)) return interaction.editReply('⚠️ O campo **Roblox ID** deve conter apenas números.');
+        console.log(`[DEBUG apagar_militar] Buscando por Roblox ID: "${robloxId}" (tipo: ${typeof robloxId})`);
         militarAlvo = await ceobDb.militares.getByRobloxAny(robloxId);
+        console.log(`[DEBUG apagar_militar] Resultado da busca:`, militarAlvo);
     } else if (discordUser) {
+        console.log(`[DEBUG apagar_militar] Buscando por Discord ID: "${discordUser.id}" (tipo: ${typeof discordUser.id})`);
         militarAlvo = await ceobDb.militares.getByDiscordAny(discordUser.id);
+        console.log(`[DEBUG apagar_militar] Resultado da busca:`, militarAlvo);
     }
 
     if (!militarAlvo) {
