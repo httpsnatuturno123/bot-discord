@@ -11,8 +11,6 @@ const OM_GRUPO_MAP = {
 
 /**
  * Resolve um input (username ou userId numérico) para { userId, username }.
- * @param {string} input - Username ou ID numérico do Roblox
- * @returns {Promise<{ userId: string, username: string }>}
  */
 async function resolverUsuario(input) {
     const trimmed = input.trim();
@@ -78,8 +76,6 @@ async function resolverPorUsername(username) {
 
 /**
  * Busca o menor roleId viável (rank > 0) de um grupo.
- * @param {string} groupId
- * @returns {Promise<string>} roleId
  */
 async function buscarMenorRole(groupId) {
     const response = await fetch(
@@ -109,13 +105,10 @@ async function buscarMenorRole(groupId) {
 }
 
 /**
- * Converte userId para o formato de membershipId usado pela Open Cloud API.
- * O membershipId é o userId codificado em Base64.
+ * Converte userId para membershipId (Base64).
+ * Formato descoberto: groups/{id}/memberships/{base64(userId)}
  *
  * Exemplo: 268223118 → "MjY4MjIzMTE4"
- *
- * @param {string} userId
- * @returns {string} membershipId em Base64
  */
 function userIdParaMembershipId(userId) {
     return Buffer.from(String(userId)).toString('base64');
@@ -123,9 +116,6 @@ function userIdParaMembershipId(userId) {
 
 /**
  * Verifica se o usuário já é membro de um grupo.
- * @param {string} robloxUserId
- * @param {string} groupId
- * @returns {Promise<{ isMembro: boolean, roleRank: number|null, roleName: string|null }>}
  */
 async function verificarMembroGrupo(robloxUserId, groupId) {
     try {
@@ -157,15 +147,8 @@ async function verificarMembroGrupo(robloxUserId, groupId) {
 }
 
 /**
- * Aguarda até que o usuário apareça como membro do grupo,
- * verificando periodicamente. Necessário porque após aceitar
- * um join-request há um delay de propagação.
- *
- * @param {string} robloxUserId
- * @param {string} groupId
- * @param {number} tentativas - Número máximo de tentativas
- * @param {number} intervaloMs - Intervalo entre tentativas em ms
- * @returns {Promise<boolean>} true se confirmou membership
+ * Aguarda até que o usuário apareça como membro do grupo.
+ * Necessário porque após aceitar join-request há delay de propagação.
  */
 async function aguardarMembership(robloxUserId, groupId, tentativas = 5, intervaloMs = 2000) {
     for (let i = 1; i <= tentativas; i++) {
@@ -182,24 +165,57 @@ async function aguardarMembership(robloxUserId, groupId, tentativas = 5, interva
         }
     }
 
-    console.warn(`   ⚠️ Membership não confirmada após ${tentativas} tentativas`);
+    console.warn(
+        `   ⚠️ Membership não confirmada após ${tentativas} tentativas`
+    );
     return false;
 }
 
 /**
- * Faz PATCH na membership do usuário para atribuir uma role.
- * Usa o membershipId em Base64 (formato da Open Cloud API v2).
+ * Aceita o join-request de um usuário em um grupo.
  *
- * @param {string} groupId
- * @param {string} robloxUserId
- * @param {string} roleId
- * @param {string} apiKey
+ * IMPORTANTE: A API exige body: {} (objeto vazio).
+ * Sem body, retorna 400.
+ *
+ * @returns {Promise<{ aceito: boolean, status: number, erro?: string }>}
+ */
+async function aceitarJoinRequest(groupId, robloxUserId, apiKey) {
+    const url =
+        `https://apis.roblox.com/cloud/v2/groups/${groupId}/join-requests/${robloxUserId}:accept`;
+
+    console.log(`   📨 Aceitando join-request...`);
+    console.log(`   URL: ${url}`);
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
+        },
+        body: JSON.stringify({})  // ← OBRIGATÓRIO! Sem isso retorna 400
+    });
+
+    const respText = await response.text();
+    console.log(`   Status: ${response.status}`);
+    console.log(`   Resposta: ${respText}`);
+
+    if (response.ok) {
+        return { aceito: true, status: response.status };
+    }
+
+    return { aceito: false, status: response.status, erro: respText };
+}
+
+/**
+ * Faz PATCH na membership para atribuir role.
+ * Usa membershipId em Base64.
+ *
  * @returns {Promise<{ ok: boolean, status: number, body: string }>}
  */
 async function patchMembership(groupId, robloxUserId, roleId, apiKey) {
     const membershipId = userIdParaMembershipId(robloxUserId);
-    const membershipPath = `groups/${groupId}/memberships/${membershipId}`;
-    const url = `https://apis.roblox.com/cloud/v2/${membershipPath}`;
+    const url =
+        `https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships/${membershipId}`;
     const body = { role: `groups/${groupId}/roles/${roleId}` };
 
     console.log(`   🔧 PATCH membership`);
@@ -229,13 +245,9 @@ async function patchMembership(groupId, robloxUserId, roleId, apiKey) {
  * Fluxo por grupo:
  * 1. Verificar se já é membro
  * 2. Buscar menor role viável
- * 3. Aceitar join-request (se pendente)
- * 4. Aguardar propagação da membership
- * 5. PATCH membership com membershipId em Base64
- *
- * @param {string} robloxUserId
- * @param {string} omSigla
- * @returns {Promise<{ resultados: Array }>}
+ * 3. Aceitar join-request (com body: {})
+ * 4. Aguardar propagação da membership (retry)
+ * 5. PATCH membership com membershipId Base64
  */
 async function aceitarEmGrupos(robloxUserId, omSigla) {
     const apiKey = process.env.KEY_ROBLOX_API;
@@ -255,6 +267,8 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
 
     for (const groupId of gruposParaAceitar) {
         try {
+            console.log(`\n── Processando grupo ${groupId} ──`);
+
             // ─── 0. Verificar se já é membro ───
             const { isMembro, roleRank } = await verificarMembroGrupo(
                 robloxUserId, groupId
@@ -262,7 +276,7 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
 
             if (isMembro && roleRank > 0) {
                 console.log(
-                    `ℹ️ Usuário ${robloxUserId} já é membro do grupo ${groupId} (rank ${roleRank}).`
+                    `   ℹ️ Já é membro (rank ${roleRank}). Pulando.`
                 );
                 resultados.push({
                     grupo: groupId,
@@ -274,56 +288,28 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
 
             // ─── 1. Buscar menor role viável ───
             const roleId = await buscarMenorRole(groupId);
-            console.log(`   📌 Menor role do grupo ${groupId}: ${roleId}`);
+            console.log(`   📌 Menor role: ${roleId}`);
 
             // ─── 2. Aceitar join-request ───
             let joinRequestAceito = false;
-            try {
-                console.log(
-                    `   📨 Tentando aceitar join-request no grupo ${groupId}...`
-                );
-                const joinResp = await fetch(
-                    `https://apis.roblox.com/cloud/v2/groups/${groupId}/join-requests/${robloxUserId}:accept`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'x-api-key': apiKey
-                        }
-                    }
+
+            if (!isMembro) {
+                const joinResult = await aceitarJoinRequest(
+                    groupId, robloxUserId, apiKey
                 );
 
-                if (joinResp.ok) {
+                if (joinResult.aceito) {
                     joinRequestAceito = true;
                     console.log(`   ✅ Join-request aceito!`);
                 } else {
-                    const joinErrText = await joinResp.text();
                     console.warn(
-                        `   ⚠️ Join-request não aceito (Status ${joinResp.status}): ${joinErrText}`
+                        `   ⚠️ Join-request falhou (Status ${joinResult.status})`
                     );
-
-                    // Se não há join-request E não é membro, não há o que fazer
-                    if (!isMembro) {
-                        resultados.push({
-                            grupo: groupId,
-                            sucesso: false,
-                            detalhe: 'Usuário não enviou solicitação para este grupo.',
-                            erro: `Join-request não encontrado (Status ${joinResp.status})`
-                        });
-                        continue;
-                    }
-                }
-            } catch (joinErr) {
-                console.warn(
-                    `   ⚠️ Erro ao aceitar join-request:`, joinErr.message
-                );
-
-                if (!isMembro) {
                     resultados.push({
                         grupo: groupId,
                         sucesso: false,
-                        detalhe: `Erro ao processar join-request: ${joinErr.message}`,
-                        erro: joinErr.message
+                        detalhe: 'Usuário não enviou solicitação para este grupo.',
+                        erro: `Status ${joinResult.status}: ${joinResult.erro || 'Sem detalhes'}`
                     });
                     continue;
                 }
@@ -339,14 +325,15 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
                     resultados.push({
                         grupo: groupId,
                         sucesso: true,
-                        detalhe: 'Join-request aceito, mas membership ainda não propagada. ' +
+                        detalhe:
+                            'Join-request aceito, mas membership ainda não propagada. ' +
                             'O usuário entrou com a role padrão.'
                     });
                     continue;
                 }
             }
 
-            // ─── 4. PATCH membership (Base64 membershipId) ───
+            // ─── 4. PATCH membership ───
             const patchResult = await patchMembership(
                 groupId, robloxUserId, roleId, apiKey
             );
@@ -362,7 +349,6 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
                 });
             } else {
                 let erroMsg = `Status ${patchResult.status}`;
-
                 try {
                     const errJson = JSON.parse(patchResult.body);
                     if (errJson.message) erroMsg = errJson.message;
@@ -374,14 +360,16 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
                 }
 
                 console.error(
-                    `   ❌ PATCH falhou para grupo ${groupId}: ${erroMsg}`
+                    `   ❌ PATCH falhou: ${erroMsg}`
                 );
 
                 if (joinRequestAceito) {
                     resultados.push({
                         grupo: groupId,
                         sucesso: true,
-                        detalhe: `Join-request aceito (usuário entrou), mas falha ao alterar role: ${erroMsg}`
+                        detalhe:
+                            `Join-request aceito (usuário entrou), ` +
+                            `mas falha ao alterar role: ${erroMsg}`
                     });
                 } else {
                     resultados.push({
@@ -393,7 +381,7 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
                 }
             }
         } catch (err) {
-            console.error(`❌ Erro ao aceitar no grupo ${groupId}:`, err);
+            console.error(`❌ Erro no grupo ${groupId}:`, err);
             resultados.push({
                 grupo: groupId,
                 sucesso: false,
