@@ -17,6 +17,20 @@ class MilitaresHandle {
         return rows[0] || null;
     }
 
+    async getByDiscordAny(discordUserId) {
+        const { rows } = await this.connection.query(
+            `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
+                    p.ordem_precedencia, p.circulo,
+                    om.nome AS om_nome, om.sigla AS om_sigla
+             FROM ceob.militares m
+             JOIN ceob.patentes p ON m.patente_id = p.id
+             JOIN ceob.organizacoes_militares om ON m.om_lotacao_id = om.id
+             WHERE m.discord_user_id = $1`,
+            [discordUserId]
+        );
+        return rows[0] || null;
+    }
+
     async getByRoblox(robloxUserId) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
@@ -26,6 +40,20 @@ class MilitaresHandle {
              JOIN ceob.patentes p ON m.patente_id = p.id
              JOIN ceob.organizacoes_militares om ON m.om_lotacao_id = om.id
              WHERE m.roblox_user_id = $1 AND m.ativo = true`,
+            [robloxUserId]
+        );
+        return rows[0] || null;
+    }
+
+    async getByRobloxAny(robloxUserId) {
+        const { rows } = await this.connection.query(
+            `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
+                    p.ordem_precedencia, p.circulo,
+                    om.nome AS om_nome, om.sigla AS om_sigla
+             FROM ceob.militares m
+             JOIN ceob.patentes p ON m.patente_id = p.id
+             JOIN ceob.organizacoes_militares om ON m.om_lotacao_id = om.id
+             WHERE m.roblox_user_id = $1`,
             [robloxUserId]
         );
         return rows[0] || null;
