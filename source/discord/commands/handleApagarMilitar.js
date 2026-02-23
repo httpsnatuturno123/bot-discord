@@ -52,8 +52,9 @@ async function handleApagarMilitar(interaction, ceobDb) {
 
         return interaction.editReply(`✅ **Lixeira Administrativa:** O militar **${militarAlvo.nome_guerra}** (Mat. ${militarAlvo.matricula}) e todos os seus rastros foram fisicamente apagados do banco de dados com sucesso.`);
     } catch (error) {
-        console.error(`Erro ao apagar definitivamente o militar ${militarAlvo.id}:`, error);
-        return interaction.editReply('❌ Ocorreu um erro interno de restrição ao tentar apagar esse militar (Foreign Key Cascade Limit). Peça a um administrador de T.I. verificar os logs.');
+        console.error(`Erro ao apagar definitivamente o militar ${militarAlvo.id}:`, error.message);
+        console.error(`Detalhe PG:`, error.detail, `| Constraint:`, error.constraint, `| Tabela:`, error.table);
+        // ...
     }
 }
 

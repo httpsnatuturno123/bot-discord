@@ -165,6 +165,7 @@ class MilitaresHandle {
             return true;
         } catch (error) {
             await client.query('ROLLBACK');
+            console.error('SQL Error:', error.message, '| Constraint:', error.constraint, '| Table:', error.table);
             throw error;
         } finally {
             client.release();
