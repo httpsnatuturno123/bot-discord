@@ -98,10 +98,39 @@ async function buscarMenorRole(groupId) {
 }
 
 /**
+ * Verifica se o usuário já é membro de um grupo.
+ * @param {string} robloxUserId - ID do usuário no Roblox
+ * @param {string} groupId - ID do grupo
+ * @returns {Promise<{ isMembro: boolean, roleRank: number|null }>}
+ */
+async function verificarMembroGrupo(robloxUserId, groupId) {
+    try {
+        const response = await fetch(`https://groups.roblox.com/v2/users/${robloxUserId}/groups/roles`);
+
+        if (!response.ok) {
+            // Se não conseguir verificar, retornar como não membro (vai tentar adicionar normalmente)
+            return { isMembro: false, roleRank: null };
+        }
+
+        const data = await response.json();
+        const grupoEncontrado = (data.data || []).find(g => String(g.group.id) === String(groupId));
+
+        if (grupoEncontrado) {
+            return { isMembro: true, roleRank: grupoEncontrado.role.rank };
+        }
+
+        return { isMembro: false, roleRank: null };
+    } catch {
+        return { isMembro: false, roleRank: null };
+    }
+}
+
+/**
  * Aceita um usuário no grupo principal CEOB e no grupo da OM correspondente.
+ * Retorna resultados detalhados por grupo, incluindo mensagem de detalhe para feedback ao DGP.
  * @param {string} robloxUserId - ID do usuário no Roblox
  * @param {string} omSigla - Sigla da OM (para encontrar o grupo correspondente)
- * @returns {Promise<{ resultados: Array<{ grupo: string, sucesso: boolean, erro?: string }> }>}
+ * @returns {Promise<{ resultados: Array<{ grupo: string, sucesso: boolean, detalhe: string, erro?: string }> }>}
  */
 async function aceitarEmGrupos(robloxUserId, omSigla) {
     const apiKey = process.env.KEY_ROBLOX_API;
@@ -122,12 +151,26 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
 
     for (const groupId of gruposParaAceitar) {
         try {
+            // 0. Verificar se o usuário já é membro do grupo
+            const { isMembro, roleRank } = await verificarMembroGrupo(robloxUserId, groupId);
+
+            if (isMembro && roleRank > 0) {
+                console.log(`ℹ️ Usuário ${robloxUserId} já é membro do grupo ${groupId} (rank ${roleRank}). Pulando.`);
+                resultados.push({
+                    grupo: groupId,
+                    sucesso: true,
+                    detalhe: `Já é membro do grupo (rank ${roleRank}). Nenhuma alteração feita.`
+                });
+                continue;
+            }
+
             // 1. Buscar menor role viável
             const roleId = await buscarMenorRole(groupId);
 
-            // 1. Opcional: Tentar aceitar a requisição de entrada (se estiver pendente)
+            // 2. Tentar aceitar a requisição de entrada (se estiver pendente)
+            let joinRequestAceito = false;
             try {
-                await fetch(
+                const joinResp = await fetch(
                     `https://apis.roblox.com/cloud/v2/groups/${groupId}/join-requests/${robloxUserId}:accept`,
                     {
                         method: 'POST',
@@ -137,11 +180,18 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
                         }
                     }
                 );
-            } catch (ignoreErr) {
-                // Se falhar (ex: usuário já está no grupo), podemos apenas ignorar
+
+                if (joinResp.ok) {
+                    joinRequestAceito = true;
+                } else {
+                    const joinErrText = await joinResp.text();
+                    console.warn(`⚠️ Join-request não aceito para grupo ${groupId} (Status ${joinResp.status}): ${joinErrText}`);
+                }
+            } catch (joinErr) {
+                console.warn(`⚠️ Erro ao tentar aceitar join-request no grupo ${groupId}:`, joinErr.message);
             }
 
-            // 2. Tentar setar role no grupo via Open Cloud API (corrigido a URL)
+            // 3. Tentar setar role no grupo via Open Cloud API
             const response = await fetch(
                 `https://apis.roblox.com/cloud/v2/groups/${groupId}/memberships/${robloxUserId}`,
                 {
@@ -157,15 +207,44 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
             );
 
             if (response.ok) {
-                resultados.push({ grupo: groupId, sucesso: true });
+                const detalheMsg = joinRequestAceito
+                    ? 'Join-request aceito e role atribuída com sucesso.'
+                    : 'Role atribuída com sucesso.';
+                resultados.push({ grupo: groupId, sucesso: true, detalhe: detalheMsg });
             } else {
                 const errData = await response.text();
-                console.error(`❌ Roblox Groups API erro para grupo ${groupId}:`, errData);
-                resultados.push({ grupo: groupId, sucesso: false, erro: `Status ${response.status}` });
+                let erroMsg = `Status ${response.status}`;
+
+                // Tentar extrair mensagem de erro legível
+                try {
+                    const errJson = JSON.parse(errData);
+                    if (errJson.message) {
+                        erroMsg = errJson.message;
+                    } else if (errJson.error) {
+                        erroMsg = errJson.error;
+                    }
+                } catch {
+                    if (errData && errData.length < 200) {
+                        erroMsg = errData;
+                    }
+                }
+
+                console.error(`❌ Roblox Groups API erro para grupo ${groupId}: ${erroMsg}`);
+                resultados.push({
+                    grupo: groupId,
+                    sucesso: false,
+                    detalhe: `Falha ao atribuir role (Status ${response.status}).`,
+                    erro: erroMsg
+                });
             }
         } catch (err) {
             console.error(`❌ Erro ao aceitar no grupo ${groupId}:`, err);
-            resultados.push({ grupo: groupId, sucesso: false, erro: err.message });
+            resultados.push({
+                grupo: groupId,
+                sucesso: false,
+                detalhe: `Erro inesperado: ${err.message}`,
+                erro: err.message
+            });
         }
     }
 

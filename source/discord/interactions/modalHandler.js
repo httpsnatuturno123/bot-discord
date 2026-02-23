@@ -82,6 +82,8 @@ async function handleRequerimentoModal(interaction, ceobDb) {
     const dadosAlvo = await requerimentoService.buscarDadosMilitarAlvo(ceobDb, requerimento.militar_alvo_id);
 
     // ── Ativa militar se aprovado ──
+    let feedbackRoblox = '';
+
     if (isAprovacao) {
         await requerimentoService.ativarMilitar(ceobDb, requerimento.militar_alvo_id);
 
@@ -92,16 +94,29 @@ async function handleRequerimentoModal(interaction, ceobDb) {
             if (robloxUserId) {
                 const resultadoRoblox = await robloxService.aceitarEmGrupos(robloxUserId, omSiglaFinal);
 
+                // Montar feedback detalhado por grupo
+                const linhasFeedback = resultadoRoblox.resultados.map(r => {
+                    if (r.sucesso) {
+                        return `✅ Grupo \`${r.grupo}\`: ${r.detalhe}`;
+                    } else {
+                        return `❌ Grupo \`${r.grupo}\`: ${r.detalhe}${r.erro ? ` — ${r.erro}` : ''}`;
+                    }
+                });
+
                 const falhas = resultadoRoblox.resultados.filter(r => !r.sucesso);
                 if (falhas.length > 0) {
-                    console.warn(`⚠️ Algumas integrações Roblox falharam para requerimento #${requerimentoId}:`, falhas);
+                    feedbackRoblox = `\n\n⚠️ **Atenção — Integração Roblox (falhas detectadas):**\n${linhasFeedback.join('\n')}`;
+                    console.warn(`⚠️ Falhas na integração Roblox para requerimento #${requerimentoId}:`, falhas);
+                } else {
+                    feedbackRoblox = `\n\n🟢 **Integração Roblox:**\n${linhasFeedback.join('\n')}`;
                 }
             } else {
+                feedbackRoblox = '\n\n⚠️ **Atenção:** Roblox User ID não encontrado nos dados do requerimento. A integração com grupos Roblox foi **pulada**.';
                 console.warn(`⚠️ Roblox User ID não encontrado nos dados extras do requerimento #${requerimentoId}. Integração com grupos pulada.`);
             }
         } catch (err) {
+            feedbackRoblox = `\n\n❌ **Erro na integração Roblox:** ${err.message}`;
             console.error(`❌ Erro na integração Roblox (requerimento #${requerimentoId}):`, err);
-            // Não bloqueia a aprovação — apenas loga o erro
         }
     }
 
@@ -155,7 +170,7 @@ async function handleRequerimentoModal(interaction, ceobDb) {
 
     if (isAprovacao) {
         await interaction.editReply(
-            `✅ Requerimento **#${requerimentoId}** ${verbo}. O militar **${dadosAlvo.nomeGuerra}** foi ativado na OM **${omSiglaFinal}** e os grupos Roblox foram processados. Boletim **${boletim.numero}** publicado.`
+            `✅ Requerimento **#${requerimentoId}** ${verbo}. O militar **${dadosAlvo.nomeGuerra}** foi ativado na OM **${omSiglaFinal}**. Boletim **${boletim.numero}** publicado.${feedbackRoblox}`
         );
     } else {
         const complemento = 'O registro pendente foi removido';
