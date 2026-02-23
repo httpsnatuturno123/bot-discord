@@ -78,19 +78,14 @@ function getSlashCommands() {
                     .setRequired(true)
             )
             .addStringOption(opt =>
-                opt.setName('roblox_id')
-                    .setDescription('ID da conta do Roblox (Apenas números)')
+                opt.setName('roblox')
+                    .setDescription('Nome de usuário ou ID numérico do Roblox')
                     .setRequired(true)
             )
             .addStringOption(opt =>
-                opt.setName('om')
-                    .setDescription('Sigla da OM de destino (ex: 1º BI, PE)')
+                opt.setName('observacao')
+                    .setDescription('Observação sobre o recruta')
                     .setRequired(true)
-            )
-            .addStringOption(opt =>
-                opt.setName('motivo')
-                    .setDescription('Motivo/Informação adicional da solicitação (Opcional)')
-                    .setRequired(false)
             )
             .addUserOption(opt =>
                 opt.setName('usuario')
@@ -168,6 +163,50 @@ function getSlashCommands() {
                 opt.setName('om')
                     .setDescription('Sigla da OM desejada (ex: PE, 1º BI, COTER)')
                     .setRequired(true)
+            ),
+
+        new SlashCommandBuilder()
+            .setName('criar_om')
+            .setDescription('Cria uma nova Organização Militar. APENAS MEMBROS DO COMANDO SUPREMO.')
+            .addStringOption(opt =>
+                opt.setName('nome')
+                    .setDescription('Nome completo da OM (ex: 5º Batalhão de Infantaria Leve)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('sigla')
+                    .setDescription('Sigla da OM (ex: 5º BIL)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('tipo')
+                    .setDescription('Tipo da OM')
+                    .setRequired(true)
+                    .addChoices(
+                        { name: 'Comando Supremo', value: 'COMANDO_SUPREMO' },
+                        { name: 'Órgão Consultivo', value: 'ORGAO_CONSULTIVO' },
+                        { name: 'Estado Maior', value: 'ESTADO_MAIOR' },
+                        { name: 'Comando Operacional', value: 'COMANDO_OPERACIONAL' },
+                        { name: 'Departamento', value: 'DEPARTAMENTO' },
+                        { name: 'Justiça', value: 'JUSTICA' },
+                        { name: 'OM Especial', value: 'OM_ESPECIAL' },
+                        { name: 'OM Subordinada', value: 'OM_SUBORDINADA' }
+                    )
+            )
+            .addStringOption(opt =>
+                opt.setName('parent_sigla')
+                    .setDescription('Sigla da OM superior à qual esta será subordinada (Opcional)')
+                    .setRequired(false)
+            )
+            .addIntegerOption(opt =>
+                opt.setName('efetivo_maximo')
+                    .setDescription('Efetivo máximo da OM (Opcional)')
+                    .setRequired(false)
+            )
+            .addStringOption(opt =>
+                opt.setName('descricao')
+                    .setDescription('Descrição da OM (Opcional)')
+                    .setRequired(false)
             ),
     ].map(cmd => cmd.toJSON());
 }

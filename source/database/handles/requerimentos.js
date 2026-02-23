@@ -35,6 +35,14 @@ class RequerimentosHandle {
         );
         return rows[0];
     }
+
+    async buscarPorId(requerimentoId) {
+        const { rows } = await this.connection.query(
+            `SELECT * FROM ceob.requerimentos WHERE id = $1`,
+            [requerimentoId]
+        );
+        return rows[0] || null;
+    }
 }
 
 module.exports = RequerimentosHandle;
