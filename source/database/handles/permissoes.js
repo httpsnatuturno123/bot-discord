@@ -3,6 +3,17 @@ class PermissoesHandle {
         this.connection = connection;
     }
 
+    async isComandoSupremo(militarId) {
+        const { rows } = await this.connection.query(
+            `SELECT p.ordem_precedencia <= 2 AS is_comando_supremo
+             FROM ceob.militares m
+             JOIN ceob.patentes p ON m.patente_id = p.id
+             WHERE m.id = $1`,
+            [militarId]
+        );
+        return rows[0]?.is_comando_supremo || false;
+    }
+
     async isAltoComando(militarId) {
         const { rows } = await this.connection.query(
             `SELECT p.ordem_precedencia <= 5 AS is_alto_comando

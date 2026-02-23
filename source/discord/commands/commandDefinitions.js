@@ -93,6 +93,20 @@ function getSlashCommands() {
                     .setDescription('Usuário do Discord (Opcional, porém recomendado)')
                     .setRequired(false)
             ),
+
+        new SlashCommandBuilder()
+            .setName('apagar_militar')
+            .setDescription('Apaga fisicamente um militar do sistema. APENAS MEMBROS DO COMANDO SUPREMO.')
+            .addStringOption(opt =>
+                opt.setName('roblox_id')
+                    .setDescription('ID da conta do Roblox do alvo (Apenas números)')
+                    .setRequired(false)
+            )
+            .addUserOption(opt =>
+                opt.setName('discord_user')
+                    .setDescription('Menção ou Usuário do Discord alvo')
+                    .setRequired(false)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 

@@ -11,6 +11,7 @@ const handleEfetivo = require('./commands/handleEfetivo');
 const handleMinhaPerfil = require('./commands/handleMinhaPerfil');
 const handleListarRecrutamento = require('./commands/handleListarRecrutamento');
 const handleRequererRecrutamento = require('./commands/handleRequererRecrutamento');
+const handleApagarMilitar = require('./commands/handleApagarMilitar');
 
 // Handler legado (prefixo)
 const handleBanLegado = require('./commands/handleBanLegado');
@@ -72,6 +73,7 @@ class DiscordBot {
             'minhaperfil': (i) => handleMinhaPerfil(i, this.ceobDb),
             'listar_recrutamento': (i) => handleListarRecrutamento(i, this.ceobDb),
             'requerer_recrutamento': (i) => handleRequererRecrutamento(i, this.ceobDb),
+            'apagar_militar': (i) => handleApagarMilitar(i, this.ceobDb),
         };
     }
 
