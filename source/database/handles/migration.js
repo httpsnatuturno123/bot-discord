@@ -17,8 +17,7 @@ class MigrationHandle {
                 '002_tables.sql',
                 '003_indexes.sql',
                 '004_functions.sql',
-                '005_seed.sql',
-                '006_seed_oms.sql'
+                '005_seed.sql'
             ];
 
             for (const file of migrationFiles) {
