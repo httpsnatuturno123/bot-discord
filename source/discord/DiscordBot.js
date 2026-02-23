@@ -153,12 +153,96 @@ class DiscordBot {
                             return interaction.editReply('❌ Requerimento não encontrado no banco de dados.');
                         }
 
+                        // Busca dados do militar alvo para o boletim
+                        let nomeMilitarAlvo = `ID #${reqAtualizado.militar_alvo_id}`;
+                        let omSiglaAlvo = '';
+
+                        // Busca militar alvo diretamente pelo ID
+                        const { rows: alvoRows } = await this.ceobDb.connection.query(
+                            `SELECT m.nome_guerra, m.matricula, om.sigla AS om_sigla
+                             FROM ceob.militares m
+                             JOIN ceob.organizacoes_militares om ON m.om_lotacao_id = om.id
+                             WHERE m.id = $1`,
+                            [reqAtualizado.militar_alvo_id]
+                        );
+                        if (alvoRows.length > 0) {
+                            nomeMilitarAlvo = alvoRows[0].nome_guerra;
+                            omSiglaAlvo = alvoRows[0].om_sigla;
+                        }
+
                         // Se APROVADO, ativa o militar
                         if (isAprovacao) {
                             await this.ceobDb.connection.query(
                                 `UPDATE ceob.militares SET ativo = true, updated_at = NOW() WHERE id = $1`,
                                 [reqAtualizado.militar_alvo_id]
                             );
+                        }
+
+                        // Cria evento na Timeline
+                        const tipoEvento = isAprovacao ? 'INGRESSO' : 'OBSERVACAO';
+                        const descricaoTimeline = isAprovacao
+                            ? `Ingresso no CEOB aprovado via Requerimento #${requerimentoId}. Justificativa: ${motivoDecisao}`
+                            : `Requerimento de Ingresso #${requerimentoId} indeferido. Motivo: ${motivoDecisao}`;
+
+                        const timelineEvento = await this.ceobDb.timeline.registrarEvento({
+                            militarId: reqAtualizado.militar_alvo_id,
+                            tipoEvento,
+                            descricao: descricaoTimeline,
+                            executadoPorId: analistaMilitar.id,
+                            dadosExtras: { requerimento_id: requerimentoId, decisao: statusFinal }
+                        });
+
+                        // Atualiza o requerimento com o timeline_evento_id
+                        await this.ceobDb.connection.query(
+                            `UPDATE ceob.requerimentos SET timeline_evento_id = $1 WHERE id = $2`,
+                            [timelineEvento.id, requerimentoId]
+                        );
+
+                        // Gera o Boletim Eletrônico
+                        const boletimConteudo = isAprovacao
+                            ? `**INGRESSO NO CEOB (Via Requerimento)**\nO recruta **${nomeMilitarAlvo}** teve seu ingresso aprovado e foi integrado à OM **${omSiglaAlvo}**.\n**Aprovado por:** ${analistaMilitar.patente_abrev} ${analistaMilitar.nome_guerra}\n**Justificativa:** ${motivoDecisao}`
+                            : `**REQUERIMENTO INDEFERIDO**\nO requerimento de ingresso do recruta **${nomeMilitarAlvo}** foi indeferido.\n**Indeferido por:** ${analistaMilitar.patente_abrev} ${analistaMilitar.nome_guerra}\n**Motivo:** ${motivoDecisao}`;
+
+                        const boletim = await this.ceobDb.boletim.criar({
+                            conteudo: boletimConteudo,
+                            requerimentoId: parseInt(requerimentoId),
+                            timelineEventoId: timelineEvento.id
+                        });
+
+                        // Envia o boletim para o canal configurado
+                        const canalBoletimId = process.env.CANAL_BOLETIM_ID;
+                        if (canalBoletimId) {
+                            try {
+                                const canalDeBoletins = await interaction.client.channels.fetch(canalBoletimId);
+
+                                const corBoletim = isAprovacao ? 0x2ECC71 : 0xE74C3C;
+                                const tituloBoletim = isAprovacao
+                                    ? `📄 Boletim Interno — ${boletim.numero} (Aprovação)`
+                                    : `📄 Boletim Interno — ${boletim.numero} (Indeferimento)`;
+
+                                const embedBoletim = {
+                                    title: tituloBoletim,
+                                    description: boletimConteudo,
+                                    color: corBoletim,
+                                    fields: [
+                                        { name: '🆔 Protocolo', value: `#${requerimentoId}`, inline: true },
+                                        { name: '🎖️ Recruta', value: nomeMilitarAlvo, inline: true },
+                                        { name: '✍️ Analisado por', value: `${analistaMilitar.patente_abrev} ${analistaMilitar.nome_guerra}`, inline: true }
+                                    ],
+                                    footer: { text: 'DGP — Departamento Geral do Pessoal' },
+                                    timestamp: new Date()
+                                };
+
+                                const msgBoletim = await canalDeBoletins.send({ embeds: [embedBoletim] });
+
+                                // Atualiza o boletim com o ID da mensagem do Discord
+                                await this.ceobDb.connection.query(
+                                    `UPDATE ceob.boletim_eletronico SET discord_message_id = $1 WHERE id = $2`,
+                                    [msgBoletim.id, boletim.id]
+                                );
+                            } catch (errBoletim) {
+                                console.error('❌ Erro ao enviar boletim para o canal:', errBoletim);
+                            }
                         }
 
                         // Atualiza a embed original (remove os botões e muda a cor)
@@ -173,15 +257,16 @@ class DiscordBot {
                             fields: [
                                 ...embedOriginal.fields,
                                 { name: '📋 Decisão', value: `**${statusTexto}**`, inline: true },
-                                { name: '💬 Justificativa', value: motivoDecisao, inline: false }
+                                { name: '💬 Justificativa', value: motivoDecisao, inline: false },
+                                { name: '📄 Boletim', value: `${boletim.numero}`, inline: true }
                             ]
                         };
 
                         await interaction.message.edit({ embeds: [embedAtualizado], components: [] });
 
                         const msgConfirmacao = isAprovacao
-                            ? `✅ Requerimento **#${requerimentoId}** aprovado. O militar foi ativado no sistema.`
-                            : `❌ Requerimento **#${requerimentoId}** indeferido. O solicitante será informado.`;
+                            ? `✅ Requerimento **#${requerimentoId}** aprovado. O militar foi ativado e o boletim **${boletim.numero}** foi publicado.`
+                            : `❌ Requerimento **#${requerimentoId}** indeferido. O boletim **${boletim.numero}** foi publicado.`;
 
                         await interaction.editReply(msgConfirmacao);
                     } catch (err) {
