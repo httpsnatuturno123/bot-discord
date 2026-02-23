@@ -111,6 +111,40 @@ function getSlashCommands() {
                     .setDescription('Menção ou Usuário do Discord alvo')
                     .setRequired(false)
             ),
+
+        new SlashCommandBuilder()
+            .setName('listar_militar')
+            .setDescription('Lista diretamente um militar com patente específica (Exclusivo DGP/AC)')
+            .addStringOption(opt =>
+                opt.setName('nome_guerra')
+                    .setDescription('Nome de Guerra do militar')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('patente')
+                    .setDescription('Abreviação da patente (ex: SD, CB, 3 SGT, CAP)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('om')
+                    .setDescription('Sigla da OM de destino (ex: COTER, DGP, PE)')
+                    .setRequired(true)
+            )
+            .addUserOption(opt =>
+                opt.setName('usuario')
+                    .setDescription('Usuário do Discord do militar (OBRIGATÓRIO)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('roblox_id')
+                    .setDescription('ID da conta do Roblox (Apenas números)')
+                    .setRequired(false)
+            )
+            .addStringOption(opt =>
+                opt.setName('roblox_username')
+                    .setDescription('Username/Nick da conta do Roblox')
+                    .setRequired(false)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 
