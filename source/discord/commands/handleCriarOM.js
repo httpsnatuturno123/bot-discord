@@ -34,7 +34,7 @@ async function handleCriarOM(interaction, ceobDb) {
 
         // 4. Se tiver uma OM superior (parent_sigla), busca o ID dela
         if (parentSigla) {
-            const resultParent = await ceobDb.db.query(
+            const resultParent = await ceobDb.query(
                 `SELECT id FROM ceob.organizacoes_militares WHERE sigla = $1`,
                 [parentSigla]
             );
@@ -47,7 +47,7 @@ async function handleCriarOM(interaction, ceobDb) {
         }
 
         // 5. Verifica se a OM com essa sigla já existe
-        const resultCheck = await ceobDb.db.query(
+        const resultCheck = await ceobDb.query(
             `SELECT id FROM ceob.organizacoes_militares WHERE sigla = $1`,
             [sigla]
         );
@@ -57,7 +57,7 @@ async function handleCriarOM(interaction, ceobDb) {
         }
 
         // 6. Insere a nova OM no banco de dados
-        const resultInsert = await ceobDb.db.query(
+        const resultInsert = await ceobDb.query(
             `INSERT INTO ceob.organizacoes_militares 
             (nome, sigla, tipo, parent_id, efetivo_maximo, descricao)
             VALUES ($1, $2, $3, $4, $5, $6)
