@@ -217,6 +217,25 @@ function getSlashCommands() {
                     .setDescription('Sigla da OM a ser deletada (ex: 5º BIL)')
                     .setRequired(true)
             ),
+
+        new SlashCommandBuilder()
+            .setName('promover')
+            .setDescription('Promove um militar do CEOB (Requer Oficialato)')
+            .addStringOption(opt =>
+                opt.setName('alvo_identificador')
+                    .setDescription('ID do Roblox ou ID do Discord do alvo')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('nova_patente')
+                    .setDescription('Abreviação da nova patente (ex: CB, 3 SGT, TEN)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('roblox_role_id')
+                    .setDescription('ID da Role no grupo do Roblox da nova patente')
+                    .setRequired(true)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 

@@ -110,6 +110,18 @@ class MilitaresHandle {
         return rows;
     }
 
+    async atualizarPatente(militarId, novaPatenteId) {
+        const { rows } = await this.connection.query(
+            `UPDATE ceob.militares
+             SET patente_id = $1
+             WHERE id = $2
+             RETURNING *`,
+            [novaPatenteId, militarId]
+        );
+        return rows[0];
+    }
+
+
     async apagarDefinitivamente(militarId) {
         const client = await this.connection.getClient();
         try {

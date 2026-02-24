@@ -404,6 +404,38 @@ class RobloxError extends Error {
     }
 }
 
+/**
+ * Promove um membro no grupo principal do Roblox.
+ * Utiliza o roleId fornecido pelo Discord e o groupId principal.
+ */
+async function promoverMembro(robloxUserId, roleId) {
+    const apiKey = process.env.KEY_ROBLOX_API;
+
+    if (!apiKey) {
+        throw new RobloxError('KEY_ROBLOX_API não configurada no .env.');
+    }
+
+    const patchResult = await patchMembership(
+        GRUPO_PRINCIPAL, robloxUserId, roleId, apiKey
+    );
+
+    if (!patchResult.ok) {
+        let erroMsg = `Status ${patchResult.status}`;
+        try {
+            const errJson = JSON.parse(patchResult.body);
+            if (errJson.message) erroMsg = errJson.message;
+            else if (errJson.error) erroMsg = errJson.error;
+        } catch {
+            if (patchResult.body && patchResult.body.length < 200) {
+                erroMsg = patchResult.body;
+            }
+        }
+        throw new RobloxError(`Falha ao atualizar rank no Roblox: ${erroMsg}`);
+    }
+
+    return true;
+}
+
 module.exports = {
     resolverUsuario,
     aceitarEmGrupos,
@@ -412,5 +444,6 @@ module.exports = {
     userIdParaMembershipId,
     RobloxError,
     OM_GRUPO_MAP,
-    GRUPO_PRINCIPAL
+    GRUPO_PRINCIPAL,
+    promoverMembro
 };
