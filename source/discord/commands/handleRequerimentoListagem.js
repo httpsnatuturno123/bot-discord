@@ -108,7 +108,7 @@ async function handleRequerimentoListagem(interaction, ceobDb) {
                     description: `**Solicitante:** <@${executorDiscordId}>\n**Tipo:** LISTAGEM / INGRESSO PRÓPRIO`,
                     color: 0xE9C46A,
                     fields: [
-                        { name: '🎖️ Militar (Alvo)', value: `**${nomeGuerra}** (${resultado.patenteNome})`, inline: true },
+                        { name: '🎖️ Militar (Alvo)', value: `**${nomeGuerra}** (${patenteAbrev})`, inline: true },
                         { name: '🎮 Roblox', value: `${robloxUsername} (ID: ${robloxId})`, inline: true },
                         { name: '🏛️ OM Solicitada', value: `${omSigla}`, inline: true },
                     ],

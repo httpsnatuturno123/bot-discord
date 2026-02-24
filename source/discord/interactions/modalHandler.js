@@ -106,7 +106,7 @@ async function handleRequerimentoModal(interaction, ceobDb) {
 
             // ── Integração Roblox: aceitar em grupos ──
             try {
-                const robloxUserId = requerimentoPreview.dados_extras?.roblox_user_id;
+                const robloxUserId = dadosAlvo?.robloxUserId || requerimentoPreview.dados_extras?.roblox_user_id;
 
                 if (robloxUserId) {
                     // Passa o rank da patente para o Roblox Service

@@ -46,13 +46,15 @@ async function handleRequerimentoButton(interaction) {
         if (isAprovacao) {
             // Modal de APROVAÇÃO: Nome de Guerra (editável), OM (definível), Patente (definível), Justificativa
             const embed = interaction.message.embeds[0];
-            const nomeGuerraAtual = extrairCampoEmbed(embed, 'Militar (Alvo)').split('**')[1] || '';
-            const patenteAtual = extrairCampoEmbed(embed, 'Militar (Alvo)').split('(')[1]?.replace(')', '') || '';
+            const campoAlvoRaw = extrairCampoEmbed(embed, 'Alvo');
+            const partes = campoAlvoRaw.split('(');
+            const nomeGuerraAtual = partes[0] ? partes[0].trim() : '';
+            const patenteAtual = partes[1] ? partes[1].replace(')', '').trim() : '';
 
             const nomeGuerraInput = new TextInputBuilder()
                 .setCustomId('nome_guerra')
                 .setLabel('Nome de Guerra (pode alterar)')
-                .setPlaceholder('Nome de Guerra do recruta')
+                .setPlaceholder('Nome de Guerra do militar')
                 .setStyle(TextInputStyle.Short)
                 .setValue(nomeGuerraAtual)
                 .setRequired(true)

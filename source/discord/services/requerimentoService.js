@@ -5,7 +5,7 @@
  */
 async function buscarDadosMilitarAlvo(db, militarAlvoId) {
     const { rows } = await db.connection.query(
-        `SELECT m.nome_guerra, m.matricula, om.sigla AS om_sigla, p.nome AS patente_nome
+        `SELECT m.nome_guerra, m.matricula, m.roblox_user_id, om.sigla AS om_sigla, p.nome AS patente_nome
          FROM ceob.militares m
          JOIN ceob.organizacoes_militares om ON m.om_lotacao_id = om.id
          JOIN ceob.patentes p ON m.patente_id = p.id
@@ -17,7 +17,8 @@ async function buscarDadosMilitarAlvo(db, militarAlvoId) {
         return {
             nomeGuerra: rows[0].nome_guerra,
             omSigla: rows[0].om_sigla,
-            patenteNome: rows[0].patente_nome
+            patenteNome: rows[0].patente_nome,
+            robloxUserId: rows[0].roblox_user_id
         };
     }
 
