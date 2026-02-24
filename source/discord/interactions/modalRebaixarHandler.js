@@ -13,33 +13,33 @@ function isRebaixarModal(customId) {
  * @param {import('../../database/CeobDatabase')} ceobDb 
  */
 async function handleRebaixarModal(interaction, ceobDb) {
-    await interaction.deferReply();
-
-    // Extrair os dados do customId (modal_rebaixar:alvoId:novaPatenteId:robloxRank)
-    const parts = interaction.customId.split(':');
-    if (parts.length !== 4) {
-        return interaction.editReply('❌ **Erro Interno**: O ID do formulário está mal formatado.');
-    }
-
-    const alvoId = parseInt(parts[1], 10);
-    const novaPatenteId = parseInt(parts[2], 10);
-    const robloxRank = parseInt(parts[3], 10);
-
-    // Extrair o motivo preenchido
-    const motivo = interaction.fields.getTextInputValue('motivo_input').trim();
-
-    if (motivo.length < 20) {
-        return interaction.editReply('❌ O motivo deve ter no mínimo 20 caracteres.');
-    }
-
-    const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
-
-    if (!executorMilitar) {
-        return interaction.editReply('❌ Você não possui cadastro no sistema.');
-    }
-
     try {
+        await interaction.deferReply();
+
+        // Extrair os dados do customId (modal_rebaixar:alvoId:novaPatenteId:robloxRank)
+        const parts = interaction.customId.split(':');
+        if (parts.length !== 4) {
+            return interaction.editReply('❌ **Erro Interno**: O ID do formulário está mal formatado.');
+        }
+
+        const alvoId = parseInt(parts[1], 10);
+        const novaPatenteId = parseInt(parts[2], 10);
+        const robloxRank = parseInt(parts[3], 10);
+
+        // Extrair o motivo preenchido
+        const motivo = interaction.fields.getTextInputValue('motivo_input').trim();
+
+        if (motivo.length < 20) {
+            return interaction.editReply('❌ O motivo deve ter no mínimo 20 caracteres.');
+        }
+
+        const executorDiscordId = interaction.user.id;
+        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+
+        if (!executorMilitar) {
+            return interaction.editReply('❌ Você não possui cadastro no sistema.');
+        }
+
         const alvoMilitar = await ceobDb.militares.getById(alvoId);
         if (!alvoMilitar || !alvoMilitar.ativo) {
             return interaction.editReply('❌ O militar alvo não foi encontrado ou está inativo.');
@@ -51,7 +51,6 @@ async function handleRebaixarModal(interaction, ceobDb) {
         }
 
         // --- Verificações Finais de Segurança ---
-        // Checar se a patente inferior e se não está promovendo, além do cargo >= executor
         if (novaPatente.ordem_precedencia <= alvoMilitar.ordem_precedencia) {
             return interaction.editReply(`❌ Rebaixamento inválido. A nova patente (${novaPatente.nome}) não é inferior à atual (${alvoMilitar.patente_nome}).`);
         }
@@ -120,7 +119,15 @@ async function handleRebaixarModal(interaction, ceobDb) {
 
     } catch (error) {
         console.error('Erro no processamento do rebaixamento:', error);
-        return interaction.editReply('❌ Ocorreu um erro interno ao processar o formulário de rebaixamento.');
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply('❌ Ocorreu um erro interno ao processar o formulário de rebaixamento.');
+            } else {
+                await interaction.reply({ content: '❌ Ocorreu um erro interno ao processar o formulário de rebaixamento.', ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('Falha ao enviar resposta de erro:', replyErr);
+        }
     }
 }
 

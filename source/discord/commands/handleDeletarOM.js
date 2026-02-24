@@ -4,27 +4,27 @@
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handleDeletarOM(interaction, ceobDb) {
-    await interaction.deferReply({ ephemeral: false });
-
-    // 1. Identifica e valida o executor do comando
-    const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
-
-    if (!executorMilitar) {
-        return interaction.editReply('❌ Você não possui cadastro no sistema.');
-    }
-
-    // 2. Validação da Permissão (Comando Supremo)
-    const isSupremo = await ceobDb.permissoes.isComandoSupremo(executorMilitar.id);
-
-    if (!isSupremo) {
-        return interaction.editReply('❌ **Permissão Negada**: Apenas membros do Comando Supremo podem deletar Organizações Militares.');
-    }
-
-    // 3. Obtém a sigla da OM a ser deletada
-    const sigla = interaction.options.getString('sigla').toUpperCase();
-
     try {
+        await interaction.deferReply({ ephemeral: false });
+
+        // 1. Identifica e valida o executor do comando
+        const executorDiscordId = interaction.user.id;
+        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+
+        if (!executorMilitar) {
+            return interaction.editReply('❌ Você não possui cadastro no sistema.');
+        }
+
+        // 2. Validação da Permissão (Comando Supremo)
+        const isSupremo = await ceobDb.permissoes.isComandoSupremo(executorMilitar.id);
+
+        if (!isSupremo) {
+            return interaction.editReply('❌ **Permissão Negada**: Apenas membros do Comando Supremo podem deletar Organizações Militares.');
+        }
+
+        // 3. Obtém a sigla da OM a ser deletada
+        const sigla = interaction.options.getString('sigla').toUpperCase();
+
         // 4. Busca a OM pelo campo sigla
         const resultOM = await ceobDb.query(
             `SELECT id, nome, sigla FROM ceob.organizacoes_militares WHERE sigla = $1 AND ativo = true`,
@@ -80,8 +80,16 @@ async function handleDeletarOM(interaction, ceobDb) {
         return interaction.editReply(mensagem);
 
     } catch (error) {
-        console.error(`[handleDeletarOM] Erro ao deletar a OM ${sigla}:`, error);
-        return interaction.editReply('❌ **Erro interno**: Ocorreu um problema ao tentar deletar a OM do banco de dados.');
+        console.error(`[handleDeletarOM] Erro ao deletar a OM:`, error);
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply('❌ **Erro interno**: Ocorreu um problema ao tentar deletar a OM do banco de dados.');
+            } else {
+                await interaction.reply({ content: '❌ **Erro interno**: Ocorreu um problema ao tentar deletar a OM.', ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('Falha ao enviar resposta de erro:', replyErr);
+        }
     }
 }
 

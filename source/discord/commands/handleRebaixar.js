@@ -7,24 +7,24 @@ const robloxService = require('../services/robloxService');
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handleRebaixar(interaction, ceobDb) {
-    const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
-
-    if (!executorMilitar) {
-        return interaction.reply({ content: '❌ Você não possui cadastro no sistema ou está inativo.', ephemeral: true });
-    }
-
-    // 1. Verificar se o executor é Oficial (ordem_precedencia <= 11)
-    if (executorMilitar.ordem_precedencia > 11) {
-        return interaction.reply({ content: '❌ Apenas Oficiais podem utilizar este comando.', ephemeral: true });
-    }
-
-    // 2. Capturar parâmetros
-    const alvoInput = interaction.options.getString('alvo_identificador').trim();
-    const novaPatenteAbrev = interaction.options.getString('nova_patente').toUpperCase();
-    const robloxRank = interaction.options.getInteger('roblox_rank');
-
     try {
+        const executorDiscordId = interaction.user.id;
+        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+
+        if (!executorMilitar) {
+            return interaction.reply({ content: '❌ Você não possui cadastro no sistema ou está inativo.', ephemeral: true });
+        }
+
+        // 1. Verificar se o executor é Oficial (ordem_precedencia <= 11)
+        if (executorMilitar.ordem_precedencia > 11) {
+            return interaction.reply({ content: '❌ Apenas Oficiais podem utilizar este comando.', ephemeral: true });
+        }
+
+        // 2. Capturar parâmetros
+        const alvoInput = interaction.options.getString('alvo_identificador').trim();
+        const novaPatenteAbrev = interaction.options.getString('nova_patente').toUpperCase();
+        const robloxRank = interaction.options.getInteger('roblox_rank');
+
         // Como não podemos fazer deferReply e showModal juntos, precisamos resolver as validações de input
         // ou deixar para o modalHandler. Faremos a resolução primária aqui.
 
@@ -70,8 +70,6 @@ async function handleRebaixar(interaction, ceobDb) {
         }
 
         // Montar o customId limitando o tamanho (100 caracteres max).
-        // Format: rebaixar:alvoId:novaPatenteAbrev:robloxRank
-        // alvo.id (integer) ~ 4 chars + patente ~ 4 chars + rank ~ 3 chars -> Bem seguro
         const customId = `modal_rebaixar:${alvoMilitar.id}:${novaPatente.id}:${robloxRank}`;
 
         if (customId.length > 100) {
@@ -97,11 +95,17 @@ async function handleRebaixar(interaction, ceobDb) {
         await interaction.showModal(modal);
 
     } catch (error) {
-        console.error('Erro no pre-rebaixar:', error);
-        if (error.name === 'RobloxError') {
-            return interaction.reply({ content: `❌ **Erro no Roblox:** ${error.message}`, ephemeral: true });
+        console.error('Erro no comando rebaixar:', error);
+        const msg = error.name === 'RobloxError' ? `❌ **Erro no Roblox:** ${error.message}` : '❌ Ocorreu um erro interno ao iniciar o rebaixamento.';
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply(msg);
+            } else {
+                await interaction.reply({ content: msg, ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('Falha ao enviar resposta de erro:', replyErr);
         }
-        return interaction.reply({ content: '❌ Ocorreu um erro interno ao iniciar o rebaixamento.', ephemeral: true });
     }
 }
 

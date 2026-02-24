@@ -4,32 +4,32 @@
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handleCriarOM(interaction, ceobDb) {
-    await interaction.deferReply({ ephemeral: false });
-
-    // 1. Identifica e valida o executor do comando
-    const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
-
-    if (!executorMilitar) {
-        return interaction.editReply('❌ Você não possui cadastro no sistema.');
-    }
-
-    // 2. Validação da Permissão (Comando Supremo)
-    const isSupremo = await ceobDb.permissoes.isComandoSupremo(executorMilitar.id);
-
-    if (!isSupremo) {
-        return interaction.editReply('❌ **Permissão Negada**: Apenas membros do Comando Supremo podem criar novas Organizações Militares.');
-    }
-
-    // 3. Obtém os parâmetros do comando
-    const nome = interaction.options.getString('nome');
-    const sigla = interaction.options.getString('sigla').toUpperCase();
-    const tipo = interaction.options.getString('tipo');
-    const parentSigla = interaction.options.getString('parent_sigla')?.toUpperCase();
-    const efetivoMaximo = interaction.options.getInteger('efetivo_maximo');
-    const descricao = interaction.options.getString('descricao');
-
     try {
+        await interaction.deferReply({ ephemeral: false });
+
+        // 1. Identifica e valida o executor do comando
+        const executorDiscordId = interaction.user.id;
+        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+
+        if (!executorMilitar) {
+            return interaction.editReply('❌ Você não possui cadastro no sistema.');
+        }
+
+        // 2. Validação da Permissão (Comando Supremo)
+        const isSupremo = await ceobDb.permissoes.isComandoSupremo(executorMilitar.id);
+
+        if (!isSupremo) {
+            return interaction.editReply('❌ **Permissão Negada**: Apenas membros do Comando Supremo podem criar novas Organizações Militares.');
+        }
+
+        // 3. Obtém os parâmetros do comando
+        const nome = interaction.options.getString('nome');
+        const sigla = interaction.options.getString('sigla').toUpperCase();
+        const tipo = interaction.options.getString('tipo');
+        const parentSigla = interaction.options.getString('parent_sigla')?.toUpperCase();
+        const efetivoMaximo = interaction.options.getInteger('efetivo_maximo');
+        const descricao = interaction.options.getString('descricao');
+
         let parentId = null;
 
         // 4. Se tiver uma OM superior (parent_sigla), busca o ID dela
@@ -79,8 +79,16 @@ async function handleCriarOM(interaction, ceobDb) {
         return interaction.editReply(mensagemSucesso);
 
     } catch (error) {
-        console.error(`[handleCriarOM] Erro ao criar a OM ${sigla}:`, error);
-        return interaction.editReply('❌ **Erro interno**: Ocorreu um problema ao tentar criar a OM no banco de dados.');
+        console.error(`[handleCriarOM] Erro ao criar a OM:`, error);
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply('❌ **Erro interno**: Ocorreu um problema ao tentar criar a OM no banco de dados.');
+            } else {
+                await interaction.reply({ content: '❌ **Erro interno**: Ocorreu um problema ao tentar criar a OM.', ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('Falha ao enviar resposta de erro:', replyErr);
+        }
     }
 }
 
