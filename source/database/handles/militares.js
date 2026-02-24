@@ -111,7 +111,7 @@ class MilitaresHandle {
     async listagem() {
         const { rows } = await this.connection.query(
             `SELECT m.id, m.matricula, m.nome_guerra, m.roblox_user_id, m.roblox_username,
-                    m.discord_user_id, m.ativo,
+                    m.discord_user_id, m.ativo, m.data_ingresso, m.data_ultima_promocao,
                     p.nome AS patente_nome, p.abreviacao AS patente_abrev,
                     p.ordem_precedencia, p.circulo,
                     om.nome AS om_nome, om.sigla AS om_sigla

@@ -34,8 +34,11 @@ async function handleListagem(interaction, ceobDb) {
     for (const [patente, membros] of Object.entries(grupos)) {
         descricao += `\n**${patente}** (${membros.length})\n`;
         for (const m of membros) {
-            const discord = m.discord_user_id ? `<@${m.discord_user_id}>` : '—';
-            descricao += `> \`${m.matricula}\` ${m.nome_guerra} · ${m.om_sigla} · ${discord}\n`;
+            const robloxInfo = m.roblox_username ? `${m.roblox_username} (${m.roblox_user_id})` : `(${m.roblox_user_id})`;
+            const dataRef = m.data_ultima_promocao || m.data_ingresso;
+            const dataStr = dataRef ? new Date(dataRef).toISOString().split('T')[0].split('-').reverse().join('/') : '—';
+
+            descricao += `> \`${m.matricula}\` - ${m.nome_guerra} - ${m.om_sigla} - ${robloxInfo} - ${m.patente_nome} - ${dataStr}\n`;
         }
     }
 
