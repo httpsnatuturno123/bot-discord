@@ -42,6 +42,17 @@ class FuncoesHandle {
         );
         return rows[0];
     }
+
+    async exonerarTodas(militarId) {
+        const { rows } = await this.connection.query(
+            `UPDATE ceob.militar_funcoes
+             SET ativo = false, data_fim = CURRENT_DATE
+             WHERE militar_id = $1 AND ativo = true
+             RETURNING *`,
+            [militarId]
+        );
+        return rows;
+    }
 }
 
 module.exports = FuncoesHandle;

@@ -477,6 +477,119 @@ async function promoverMembro(robloxUserId, rankNumber) {
     return true;
 }
 
+/**
+ * Remove um membro do(s) grupo(s) do Roblox (Principal + OM).
+ * Como a Cloud API v2 não possui DELETE de membership,
+ * a remoção é feita via PATCH para a role de rank 0 (Guest).
+ *
+ * @param {string} robloxUserId - ID do usuário no Roblox
+ * @param {string} omSigla - Sigla da OM do militar
+ * @returns {Promise<{ resultados: Array }>}
+ */
+async function removerDeGrupos(robloxUserId, omSigla) {
+    const apiKey = process.env.KEY_ROBLOX_API;
+
+    if (!apiKey) {
+        throw new RobloxError('KEY_ROBLOX_API não configurada no .env.');
+    }
+
+    const gruposParaRemover = [GRUPO_PRINCIPAL];
+
+    const grupoOm = OM_GRUPO_MAP[omSigla];
+    if (grupoOm && !gruposParaRemover.includes(grupoOm)) {
+        gruposParaRemover.push(grupoOm);
+    }
+
+    const resultados = [];
+
+    for (const groupId of gruposParaRemover) {
+        try {
+            console.log(`\n── Removendo do grupo ${groupId} ──`);
+
+            // 1. Verificar se é membro
+            const { isMembro, roleRank } = await verificarMembroGrupo(
+                robloxUserId, groupId
+            );
+
+            if (!isMembro) {
+                console.log(`   ℹ️ Não é membro do grupo. Pulando.`);
+                resultados.push({
+                    grupo: groupId,
+                    sucesso: true,
+                    detalhe: 'Não é membro do grupo.'
+                });
+                continue;
+            }
+
+            if (roleRank === 0) {
+                console.log(`   ℹ️ Já é Guest (rank 0). Pulando.`);
+                resultados.push({
+                    grupo: groupId,
+                    sucesso: true,
+                    detalhe: 'Já é Guest no grupo.'
+                });
+                continue;
+            }
+
+            // 2. Buscar role de rank 0 (Guest)
+            const roles = await buscarRolesDoGrupo(groupId);
+            const guestRole = roles.find(r => r.rank === 0);
+
+            if (!guestRole) {
+                console.warn(`   ⚠️ Role de Guest (rank 0) não encontrada.`);
+                resultados.push({
+                    grupo: groupId,
+                    sucesso: false,
+                    detalhe: 'Role de Guest (rank 0) não encontrada no grupo.'
+                });
+                continue;
+            }
+
+            // 3. PATCH membership para Guest
+            const patchResult = await patchMembership(
+                groupId, robloxUserId, String(guestRole.id), apiKey
+            );
+
+            if (patchResult.ok) {
+                console.log(`   ✅ Removido (rebaixado para Guest).`);
+                resultados.push({
+                    grupo: groupId,
+                    sucesso: true,
+                    detalhe: 'Membro removido (rebaixado para Guest).'
+                });
+            } else {
+                let erroMsg = `Status ${patchResult.status}`;
+                try {
+                    const errJson = JSON.parse(patchResult.body);
+                    if (errJson.message) erroMsg = errJson.message;
+                    else if (errJson.error) erroMsg = errJson.error;
+                } catch {
+                    if (patchResult.body && patchResult.body.length < 200) {
+                        erroMsg = patchResult.body;
+                    }
+                }
+
+                console.error(`   ❌ Falha ao remover: ${erroMsg}`);
+                resultados.push({
+                    grupo: groupId,
+                    sucesso: false,
+                    detalhe: `Falha ao remover do grupo: ${erroMsg}`
+                });
+            }
+        } catch (err) {
+            console.error(`❌ Erro no grupo ${groupId}:`, err);
+            resultados.push({
+                grupo: groupId,
+                sucesso: false,
+                detalhe: `Erro inesperado: ${err.message}`,
+                erro: err.message
+            });
+        }
+    }
+
+    return { resultados };
+}
+
 module.exports = {
     resolverUsuario,
     aceitarEmGrupos,
@@ -486,5 +599,6 @@ module.exports = {
     RobloxError,
     OM_GRUPO_MAP,
     GRUPO_PRINCIPAL,
-    promoverMembro
+    promoverMembro,
+    removerDeGrupos
 };

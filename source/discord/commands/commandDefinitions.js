@@ -255,6 +255,31 @@ function getSlashCommands() {
                     .setDescription('Número do Rank no grupo do Roblox da nova patente (1-255)')
                     .setRequired(true)
             ),
+
+        new SlashCommandBuilder()
+            .setName('desligar')
+            .setDescription('Desliga um militar do CEOB (Demissão, Exoneração, Exclusão ou Reforma)')
+            .addStringOption(opt =>
+                opt.setName('alvo_identificador')
+                    .setDescription('ID do Roblox, @Discord ou Username do alvo')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('tipo')
+                    .setDescription('Tipo de desligamento')
+                    .setRequired(true)
+                    .addChoices(
+                        { name: 'Demissão a Pedido', value: 'DEMISSAO_PEDIDO' },
+                        { name: 'Exoneração', value: 'EXONERACAO' },
+                        { name: 'Exclusão', value: 'EXCLUSAO' },
+                        { name: 'Reforma', value: 'REFORMA' }
+                    )
+            )
+            .addStringOption(opt =>
+                opt.setName('motivo')
+                    .setDescription('Motivo do desligamento')
+                    .setRequired(true)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 

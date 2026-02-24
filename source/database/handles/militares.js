@@ -135,6 +135,17 @@ class MilitaresHandle {
         return rows[0];
     }
 
+    async desligar(militarId, situacaoFuncional) {
+        const { rows } = await this.connection.query(
+            `UPDATE ceob.militares
+             SET ativo = false, situacao_funcional = $1, updated_at = NOW()
+             WHERE id = $2
+             RETURNING *`,
+            [situacaoFuncional, militarId]
+        );
+        return rows[0];
+    }
+
 
     async apagarDefinitivamente(militarId) {
         const client = await this.connection.getClient();
