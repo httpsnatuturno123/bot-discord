@@ -24,6 +24,14 @@ class PatentesHandle {
         );
         return rows[0] || null;
     }
+
+    async getById(id) {
+        const { rows } = await this.connection.query(
+            `SELECT * FROM ceob.patentes WHERE id = $1 AND ativo = true`,
+            [id]
+        );
+        return rows[0] || null;
+    }
 }
 
 module.exports = PatentesHandle;

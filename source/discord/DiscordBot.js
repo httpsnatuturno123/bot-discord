@@ -23,6 +23,7 @@ const handleRequerimentoListagem = require('./commands/handleRequerimentoListage
 const handleCriarOM = require('./commands/handleCriarOM');
 const handleDeletarOM = require('./commands/handleDeletarOM');
 const handlePromover = require('./commands/handlePromover');
+const handleRebaixar = require('./commands/handleRebaixar');
 
 // Handler legado (prefixo)
 const handleBanLegado = require('./commands/handleBanLegado');
@@ -65,6 +66,7 @@ class DiscordBot {
             'criar_om': (i) => handleCriarOM(i, db),
             'deletar_om': (i) => handleDeletarOM(i, db),
             'promover': (i) => handlePromover(i, db),
+            'rebaixar': (i) => handleRebaixar(i, db),
         };
     }
 

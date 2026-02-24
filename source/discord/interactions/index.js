@@ -1,6 +1,7 @@
 // src/interactions/index.js
 const { isRequerimentoButton, handleRequerimentoButton } = require('./buttonHandler');
 const { isRequerimentoModal, handleRequerimentoModal } = require('./modalHandler');
+const { isRebaixarModal, handleRebaixarModal } = require('./modalRebaixarHandler');
 
 /**
  * Roteador central de interações (botões, modais).
@@ -23,6 +24,12 @@ async function routeInteraction(interaction, ceobDb) {
             await handleRequerimentoModal(interaction, ceobDb);
             return true;
         }
+
+        if (isRebaixarModal(interaction.customId)) {
+            await handleRebaixarModal(interaction, ceobDb);
+            return true;
+        }
+
         return false;
     }
 

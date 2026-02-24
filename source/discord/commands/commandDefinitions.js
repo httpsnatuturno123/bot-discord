@@ -236,6 +236,25 @@ function getSlashCommands() {
                     .setDescription('ID da Role no grupo do Roblox da nova patente')
                     .setRequired(true)
             ),
+
+        new SlashCommandBuilder()
+            .setName('rebaixar')
+            .setDescription('Rebaixa um militar do CEOB (Requer Oficialato)')
+            .addStringOption(opt =>
+                opt.setName('alvo_identificador')
+                    .setDescription('ID do Roblox ou ID do Discord do alvo')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('nova_patente')
+                    .setDescription('Abreviação da nova patente (ex: SD, CB, ST)')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('roblox_role_id')
+                    .setDescription('ID da Role no grupo do Roblox da nova patente')
+                    .setRequired(true)
+            ),
     ].map(cmd => cmd.toJSON());
 }
 
