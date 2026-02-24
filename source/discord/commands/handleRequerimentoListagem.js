@@ -4,59 +4,59 @@
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handleRequerimentoListagem(interaction, ceobDb) {
-    await interaction.deferReply({ ephemeral: true });
-
-    // 1. Identifica e valida o executor do comando
-    const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
-
-    // Regra: O usuário NÃO PODE estar cadastrado no sistema
-    if (executorMilitar) {
-        return interaction.editReply('❌ Você já possui cadastro ativo no sistema. Este comando é apenas para não listados.');
-    }
-
-    // 2. Captura os parâmetros
-    const nomeGuerra = interaction.options.getString('nome_guerra');
-    const patenteAbrev = interaction.options.getString('patente').toUpperCase();
-    const omSigla = interaction.options.getString('om').toUpperCase();
-    const robloxUsernameInput = interaction.options.getString('roblox_username');
-
-    // 3. Validação na API do Roblox via username
-    let robloxId = null;
-    let robloxUsername = null;
-
     try {
-        const response = await fetch('https://users.roblox.com/v1/usernames/users', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                usernames: [robloxUsernameInput],
-                excludeBannedUsers: false
-            })
-        });
+        await interaction.deferReply({ ephemeral: true });
 
-        if (!response.ok) {
-            return interaction.editReply(`❌ **Erro na API do Roblox:** Status ${response.status}. Tente novamente mais tarde.`);
+        // 1. Identifica e valida o executor do comando
+        const executorDiscordId = interaction.user.id;
+        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+
+        // Regra: O usuário NÃO PODE estar cadastrado no sistema
+        if (executorMilitar) {
+            return interaction.editReply('❌ Você já possui cadastro ativo no sistema. Este comando é apenas para não listados.');
         }
 
-        const data = await response.json();
+        // 2. Captura os parâmetros
+        const nomeGuerra = interaction.options.getString('nome_guerra');
+        const patenteAbrev = interaction.options.getString('patente').toUpperCase();
+        const omSigla = interaction.options.getString('om').toUpperCase();
+        const robloxUsernameInput = interaction.options.getString('roblox_username');
 
-        if (!data.data || data.data.length === 0) {
-            return interaction.editReply(`❌ **Bloqueado:** Nenhuma conta do Roblox encontrada com o username \`${robloxUsernameInput}\`. Verifique a ortografia.`);
+        // 3. Validação na API do Roblox via username
+        let robloxId = null;
+        let robloxUsername = null;
+
+        try {
+            const response = await fetch('https://users.roblox.com/v1/usernames/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    usernames: [robloxUsernameInput],
+                    excludeBannedUsers: false
+                })
+            });
+
+            if (!response.ok) {
+                return interaction.editReply(`❌ **Erro na API do Roblox:** Status ${response.status}. Tente novamente mais tarde.`);
+            }
+
+            const data = await response.json();
+
+            if (!data.data || data.data.length === 0) {
+                return interaction.editReply(`❌ **Bloqueado:** Nenhuma conta do Roblox encontrada com o username \`${robloxUsernameInput}\`. Verifique a ortografia.`);
+            }
+
+            robloxId = data.data[0].id.toString();
+            robloxUsername = data.data[0].name;
+
+        } catch (err) {
+            console.error('Erro ao consultar API do Roblox (por username):', err);
+            return interaction.editReply('❌ **Falha de Comunicação:** Não foi possível conectar aos servidores do Roblox.');
         }
 
-        robloxId = data.data[0].id.toString();
-        robloxUsername = data.data[0].name;
-
-    } catch (err) {
-        console.error('Erro ao consultar API do Roblox (por username):', err);
-        return interaction.editReply('❌ **Falha de Comunicação:** Não foi possível conectar aos servidores do Roblox.');
-    }
-
-    // 4. Executa a inserção do requerimento + militar inativo
-    try {
+        // 4. Executa a inserção do requerimento + militar inativo
         const resultado = await ceobDb.requerimentoListagem.requererListagem({
-            executadoPorId: null, // Será preenchido dentro do próprio handler como o ID recém-criado
+            executadoPorId: null,
             robloxId,
             robloxUsername,
             nomeGuerra,
@@ -121,16 +121,33 @@ async function handleRequerimentoListagem(interaction, ceobDb) {
                 console.error('❌ Erro ao enviar mensagem para o canal de requerimentos da DGP:', err);
             }
         }
+
     } catch (error) {
         console.error('Erro no requerimento de listagem:', error);
 
-        if (error.message.includes('OM') || error.message.includes('Patente')) {
-            return interaction.editReply(`❌ ${error.message}`);
+        // Mensagens amigáveis para erros conhecidos
+        const msg = error.message || '';
+        let respostaUsuario;
+
+        if (msg.includes('Patente')) {
+            respostaUsuario = `❌ **Patente não encontrada:** A abreviação informada não está registrada no sistema. Verifique a abreviação e tente novamente.\n\n> Detalhe: ${msg}`;
+        } else if (msg.includes('OM')) {
+            respostaUsuario = `❌ **OM não encontrada:** A sigla informada não corresponde a nenhuma Organização Militar ativa. Verifique a sigla e tente novamente.\n\n> Detalhe: ${msg}`;
         } else if (error.code === '23505') {
-            return interaction.editReply('❌ **Erro**: O Roblox ID fornecido já está vinculado a outro militar no sistema.');
+            respostaUsuario = '❌ **Erro**: O Roblox ID fornecido já está vinculado a outro militar no sistema.';
+        } else {
+            respostaUsuario = '❌ Ocorreu um erro interno ao processar seu requerimento. Tente novamente mais tarde.';
         }
 
-        interaction.editReply('❌ Ocorreu um erro interno ao processar seu requerimento.');
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply(respostaUsuario);
+            } else {
+                await interaction.reply({ content: respostaUsuario, ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('❌ Falha ao enviar resposta de erro ao usuário:', replyErr);
+        }
     }
 }
 
