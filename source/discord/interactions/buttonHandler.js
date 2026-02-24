@@ -43,9 +43,10 @@ async function handleRequerimentoButton(interaction) {
         .setTitle(isAprovacao ? `✅ Aprovar #${requerimentoId}` : `❌ Indeferir #${requerimentoId}`);
 
     if (isAprovacao) {
-        // Modal de APROVAÇÃO: Nome de Guerra (editável), OM (definível), Justificativa
+        // Modal de APROVAÇÃO: Nome de Guerra (editável), OM (definível), Patente (definível), Justificativa
         const embed = interaction.message.embeds[0];
-        const nomeGuerraAtual = extrairCampoEmbed(embed, 'Recruta');
+        const nomeGuerraAtual = extrairCampoEmbed(embed, 'Militar (Alvo)').split('**')[1] || '';
+        const patenteAtual = extrairCampoEmbed(embed, 'Militar (Alvo)').split('(')[1]?.replace(')', '') || '';
 
         const nomeGuerraInput = new TextInputBuilder()
             .setCustomId('nome_guerra')
@@ -64,6 +65,15 @@ async function handleRequerimentoButton(interaction) {
             .setRequired(true)
             .setMaxLength(30);
 
+        const patenteInput = new TextInputBuilder()
+            .setCustomId('patente')
+            .setLabel('Patente de destino (Abreviação)')
+            .setPlaceholder('Ex: REC, SD, CB, 3º SGT')
+            .setStyle(TextInputStyle.Short)
+            .setValue(patenteAtual)
+            .setRequired(true)
+            .setMaxLength(30);
+
         const motivoInput = new TextInputBuilder()
             .setCustomId('motivo_decisao')
             .setLabel('Justificativa da Aprovação')
@@ -76,6 +86,7 @@ async function handleRequerimentoButton(interaction) {
         modal.addComponents(
             new ActionRowBuilder().addComponents(nomeGuerraInput),
             new ActionRowBuilder().addComponents(omInput),
+            new ActionRowBuilder().addComponents(patenteInput),
             new ActionRowBuilder().addComponents(motivoInput)
         );
     } else {

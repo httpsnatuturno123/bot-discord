@@ -9,6 +9,33 @@ const OM_GRUPO_MAP = {
     'COTER': '6833008',
 };
 
+// Mapeamento: ordem_precedencia (DB) -> Rank (Roblox)
+const PATENTE_ROBLOX_RANK_MAP = {
+    1: 18,  // Marechal
+    2: 17,  // General de Exército
+    3: 16,  // General de Divisão
+    4: 15,  // General de Brigada
+    5: 14,  // Coronel
+    6: 13,  // Tenente-Coronel
+    7: 12,  // Major
+    8: 11,  // Capitão
+    9: 10,  // 1º Tenente
+    10: 9, // 2º Tenente
+    11: 8, // Aspirante a Oficial
+    12: 7, // Cadete da AMAN
+    13: 7, // Subtenente
+    14: 6, // 1º Sargento
+    15: 5, // 2º Sargento
+    16: 4, // Aluno da EsPCEx
+    17: 4, // 3º Sargento
+    18: 2, // Aluno da ESA
+    19: 2, // Cabo Aluno (CFST)
+    20: 2, // Cabo
+    21: 1, // SD/REC Aluno (CFC)
+    22: 1, // Soldado
+    23: 1,   // Soldado-Recruta (Tive que chutar um valor para o Recruta, depois confirmar)
+};
+
 /**
  * Resolve um input (username ou userId numérico) para { userId, username }.
  */
@@ -282,7 +309,7 @@ async function patchMembership(groupId, robloxUserId, roleId, apiKey) {
  * 4. Aguardar propagação da membership (retry)
  * 5. PATCH membership com membershipId Base64
  */
-async function aceitarEmGrupos(robloxUserId, omSigla) {
+async function aceitarEmGrupos(robloxUserId, omSigla, patenteRankNumber = null) {
     const apiKey = process.env.KEY_ROBLOX_API;
 
     if (!apiKey) {
@@ -308,20 +335,55 @@ async function aceitarEmGrupos(robloxUserId, omSigla) {
             );
 
             if (isMembro && roleRank > 0) {
-                console.log(
-                    `   ℹ️ Já é membro (rank ${roleRank}). Pulando.`
-                );
-                resultados.push({
-                    grupo: groupId,
-                    sucesso: true,
-                    detalhe: `Já é membro do grupo (rank ${roleRank}).`
-                });
+                const mappedRank = patenteRankNumber ? PATENTE_ROBLOX_RANK_MAP[patenteRankNumber] : null;
+
+                if (groupId === GRUPO_PRINCIPAL && mappedRank && roleRank !== mappedRank) {
+                    console.log(`   ℹ️ Já é membro, mas rank atual (${roleRank}) é diferente do mapeado desejado (${mappedRank}). Atualizando rank...`);
+                    try {
+                        await promoverMembro(robloxUserId, mappedRank);
+                        resultados.push({
+                            grupo: groupId,
+                            sucesso: true,
+                            detalhe: `Já era membro, rank atualizado para Roblox Rank ${mappedRank}.`
+                        });
+                    } catch (err) {
+                        resultados.push({
+                            grupo: groupId,
+                            sucesso: false,
+                            detalhe: `Já era membro, mas falha ao atualizar rank.`,
+                            erro: err.message
+                        });
+                    }
+                } else {
+                    console.log(
+                        `   ℹ️ Já é membro (rank ${roleRank}). Pulando.`
+                    );
+                    resultados.push({
+                        grupo: groupId,
+                        sucesso: true,
+                        detalhe: `Já é membro do grupo (rank ${roleRank}).`
+                    });
+                }
                 continue;
             }
 
-            // ─── 1. Buscar menor role viável ───
-            const roleId = await buscarMenorRole(groupId);
-            console.log(`   📌 Menor role: ${roleId}`);
+            // ─── 1. Buscar menor role viável ou específica ───
+            let roleId;
+            const mappedRank = patenteRankNumber ? PATENTE_ROBLOX_RANK_MAP[patenteRankNumber] : null;
+
+            if (groupId === GRUPO_PRINCIPAL && mappedRank) {
+                try {
+                    roleId = await buscarRolePorRank(groupId, mappedRank);
+                    console.log(`   📌 Role específica via Roblox Rank Mapeado ${mappedRank} (DB Ordem: ${patenteRankNumber}): ${roleId}`);
+                } catch (err) {
+                    console.warn(`   ⚠️ Rank Mapeado ${mappedRank} não encontrado no grupo ${groupId}. Usando menor role. Erro: ${err.message}`);
+                    roleId = await buscarMenorRole(groupId);
+                    console.log(`   📌 Menor role (fallback): ${roleId}`);
+                }
+            } else {
+                roleId = await buscarMenorRole(groupId);
+                console.log(`   📌 Menor role: ${roleId}`);
+            }
 
             // ─── 2. Aceitar join-request ───
             let joinRequestAceito = false;
@@ -600,5 +662,6 @@ module.exports = {
     OM_GRUPO_MAP,
     GRUPO_PRINCIPAL,
     promoverMembro,
-    removerDeGrupos
+    removerDeGrupos,
+    PATENTE_ROBLOX_RANK_MAP
 };

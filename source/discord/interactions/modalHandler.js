@@ -41,28 +41,44 @@ async function handleRequerimentoModal(interaction, ceobDb) {
         return interaction.editReply('❌ Requerimento não encontrado no banco de dados.');
     }
 
-    // ── Se aprovação: capturar novos campos e validar OM ──
+    // ── Se aprovação: capturar novos campos e validar OM e Patente ──
     let nomeGuerraFinal = null;
     let omSiglaFinal = null;
+    let patenteAbrevFinal = null;
 
     if (isAprovacao) {
         nomeGuerraFinal = interaction.fields.getTextInputValue('nome_guerra').trim();
         omSiglaFinal = interaction.fields.getTextInputValue('om_destino').trim().toUpperCase();
 
+        try {
+            patenteAbrevFinal = interaction.fields.getTextInputValue('patente').trim().toUpperCase();
+        } catch (e) {
+            // Em caso de ser modal antigo ou problema lendo o campo, cai para null
+        }
+
         if (!nomeGuerraFinal) {
             return interaction.editReply('❌ O Nome de Guerra não pode estar vazio.');
         }
 
-        // Validar que a OM existe no banco
+        if (!patenteAbrevFinal) {
+            return interaction.editReply('❌ A Patente não pode estar vazia.');
+        }
+
+        // Validar que a OM e Patente existem no banco
         const omExiste = await ceobDb.organizacoes.getBySigla(omSiglaFinal);
         if (!omExiste) {
             return interaction.editReply(`❌ OM com sigla **"${omSiglaFinal}"** não encontrada no sistema. Verifique a sigla e tente novamente.`);
         }
 
-        // Atualizar o militar pendente com o novo nome de guerra e OM
+        const patenteExiste = await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal);
+        if (!patenteExiste) {
+            return interaction.editReply(`❌ Patente com abreviação **"${patenteAbrevFinal}"** não encontrada no sistema. Verifique a sigla e tente novamente.`);
+        }
+
+        // Atualizar o militar pendente com o novo nome de guerra, OM e Patente
         await ceobDb.connection.query(
-            `UPDATE ceob.militares SET nome_guerra = $1, om_lotacao_id = $2, updated_at = NOW() WHERE id = $3`,
-            [nomeGuerraFinal, omExiste.id, requerimentoPreview.militar_alvo_id]
+            `UPDATE ceob.militares SET nome_guerra = $1, om_lotacao_id = $2, patente_id = $3, updated_at = NOW() WHERE id = $4`,
+            [nomeGuerraFinal, omExiste.id, patenteExiste.id, requerimentoPreview.militar_alvo_id]
         );
     }
 
@@ -92,7 +108,13 @@ async function handleRequerimentoModal(interaction, ceobDb) {
             const robloxUserId = requerimentoPreview.dados_extras?.roblox_user_id;
 
             if (robloxUserId) {
-                const resultadoRoblox = await robloxService.aceitarEmGrupos(robloxUserId, omSiglaFinal);
+                // Passa o rank da patente para o Roblox Service
+                let patenteRankNumber = null;
+                if (patenteAbrevFinal) {
+                    const patenteFinal = await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal);
+                    patenteRankNumber = patenteFinal ? patenteFinal.ordem_precedencia : null;
+                }
+                const resultadoRoblox = await robloxService.aceitarEmGrupos(robloxUserId, omSiglaFinal, patenteRankNumber);
 
                 // Montar feedback detalhado por grupo
                 const linhasFeedback = resultadoRoblox.resultados.map(r => {
@@ -133,7 +155,7 @@ async function handleRequerimentoModal(interaction, ceobDb) {
     // ── Gera e publica boletim ──
     const conteudoBoletim = boletimService.gerarConteudoBoletim({
         isAprovacao,
-        patenteNome: dadosAlvo.patenteNome,
+        patenteNome: patenteAbrevFinal ? (await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal)).nome : dadosAlvo.patenteNome,
         nomeGuerra: dadosAlvo.nomeGuerra,
         omSigla: dadosAlvo.omSigla,
         analistaMilitar,
