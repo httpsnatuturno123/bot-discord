@@ -1,4 +1,4 @@
-const { robloxService } = require('../services');
+const robloxService = require('../services/robloxService');
 
 /**
  * Retorna true se a customId pertencer ao modal de rebaixamento

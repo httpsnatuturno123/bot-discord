@@ -1,5 +1,5 @@
 const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { robloxService } = require('../services');
+const robloxService = require('../services/robloxService');
 
 /**
  * Handler do comando /rebaixar

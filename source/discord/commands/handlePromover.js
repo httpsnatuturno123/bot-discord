@@ -1,4 +1,4 @@
-const { robloxService } = require('../services');
+const robloxService = require('../services/robloxService');
 
 /**
  * Handler do comando /promover
