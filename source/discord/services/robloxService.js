@@ -75,9 +75,10 @@ async function resolverPorUsername(username) {
 }
 
 /**
- * Busca o menor roleId viável (rank > 0) de um grupo.
+ * Busca todos os roles de um grupo no Roblox.
+ * @returns {Promise<Array<{ id: number, name: string, rank: number }>>}
  */
-async function buscarMenorRole(groupId) {
+async function buscarRolesDoGrupo(groupId) {
     const response = await fetch(
         `https://groups.roblox.com/v1/groups/${groupId}/roles`
     );
@@ -89,7 +90,14 @@ async function buscarMenorRole(groupId) {
     }
 
     const data = await response.json();
-    const roles = data.roles || [];
+    return data.roles || [];
+}
+
+/**
+ * Busca o menor roleId viável (rank > 0) de um grupo.
+ */
+async function buscarMenorRole(groupId) {
+    const roles = await buscarRolesDoGrupo(groupId);
 
     const rolesValidos = roles
         .filter(r => r.rank > 0)
@@ -102,6 +110,31 @@ async function buscarMenorRole(groupId) {
     }
 
     return String(rolesValidos[0].id);
+}
+
+/**
+ * Busca o roleId correspondente a um rank numérico no grupo.
+ * @param {string} groupId - ID do grupo Roblox
+ * @param {number} rankNumber - Número do rank (1-255)
+ * @returns {Promise<string>} O roleId interno do Roblox
+ */
+async function buscarRolePorRank(groupId, rankNumber) {
+    const roles = await buscarRolesDoGrupo(groupId);
+    const role = roles.find(r => r.rank === rankNumber);
+
+    if (!role) {
+        const rolesDisponiveis = roles
+            .filter(r => r.rank > 0)
+            .sort((a, b) => a.rank - b.rank)
+            .map(r => `  Rank ${r.rank}: ${r.name} (ID: ${r.id})`)
+            .join('\n');
+        throw new RobloxError(
+            `Nenhum role com rank ${rankNumber} encontrado no grupo ${groupId}.\n` +
+            `Roles disponíveis:\n${rolesDisponiveis}`
+        );
+    }
+
+    return String(role.id);
 }
 
 /**
@@ -406,14 +439,22 @@ class RobloxError extends Error {
 
 /**
  * Promove um membro no grupo principal do Roblox.
- * Utiliza o roleId fornecido pelo Discord e o groupId principal.
+ * Busca automaticamente o roleId correto a partir do rank numérico,
+ * seguindo o mesmo padrão de aceitarEmGrupos/buscarMenorRole.
+ *
+ * @param {string} robloxUserId - ID do usuário no Roblox
+ * @param {number} rankNumber - Número do rank no grupo (1-255)
  */
-async function promoverMembro(robloxUserId, roleId) {
+async function promoverMembro(robloxUserId, rankNumber) {
     const apiKey = process.env.KEY_ROBLOX_API;
 
     if (!apiKey) {
         throw new RobloxError('KEY_ROBLOX_API não configurada no .env.');
     }
+
+    // Resolve o rank numérico para o roleId interno do Roblox
+    const roleId = await buscarRolePorRank(GRUPO_PRINCIPAL, rankNumber);
+    console.log(`   📌 Rank ${rankNumber} → roleId ${roleId}`);
 
     const patchResult = await patchMembership(
         GRUPO_PRINCIPAL, robloxUserId, roleId, apiKey

@@ -15,7 +15,7 @@ function isRebaixarModal(customId) {
 async function handleRebaixarModal(interaction, ceobDb) {
     await interaction.deferReply();
 
-    // Extrair os dados do customId (modal_rebaixar:alvoId:novaPatenteId:robloxRoleId)
+    // Extrair os dados do customId (modal_rebaixar:alvoId:novaPatenteId:robloxRank)
     const parts = interaction.customId.split(':');
     if (parts.length !== 4) {
         return interaction.editReply('❌ **Erro Interno**: O ID do formulário está mal formatado.');
@@ -23,7 +23,7 @@ async function handleRebaixarModal(interaction, ceobDb) {
 
     const alvoId = parseInt(parts[1], 10);
     const novaPatenteId = parseInt(parts[2], 10);
-    const robloxRoleId = parts[3];
+    const robloxRank = parseInt(parts[3], 10);
 
     // Extrair o motivo preenchido
     const motivo = interaction.fields.getTextInputValue('motivo_input').trim();
@@ -66,7 +66,7 @@ async function handleRebaixarModal(interaction, ceobDb) {
 
         // 1. Atualizar Roblox
         try {
-            await robloxService.promoverMembro(alvoMilitar.roblox_user_id, robloxRoleId);
+            await robloxService.promoverMembro(alvoMilitar.roblox_user_id, robloxRank);
         } catch (err) {
             console.error('Erro na integração com Roblox (Rebaixamento):', err);
             return interaction.editReply(`❌ **Falha ao atualizar o cargo no Roblox do militar:** ${err.message}\n` +

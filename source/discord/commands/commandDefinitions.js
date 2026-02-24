@@ -231,9 +231,9 @@ function getSlashCommands() {
                     .setDescription('Abreviação da nova patente (ex: CB, 3 SGT, TEN)')
                     .setRequired(true)
             )
-            .addStringOption(opt =>
-                opt.setName('roblox_role_id')
-                    .setDescription('ID da Role no grupo do Roblox da nova patente')
+            .addIntegerOption(opt =>
+                opt.setName('roblox_rank')
+                    .setDescription('Número do Rank no grupo do Roblox da nova patente (1-255)')
                     .setRequired(true)
             ),
 
@@ -250,9 +250,9 @@ function getSlashCommands() {
                     .setDescription('Abreviação da nova patente (ex: SD, CB, ST)')
                     .setRequired(true)
             )
-            .addStringOption(opt =>
-                opt.setName('roblox_role_id')
-                    .setDescription('ID da Role no grupo do Roblox da nova patente')
+            .addIntegerOption(opt =>
+                opt.setName('roblox_rank')
+                    .setDescription('Número do Rank no grupo do Roblox da nova patente (1-255)')
                     .setRequired(true)
             ),
     ].map(cmd => cmd.toJSON());

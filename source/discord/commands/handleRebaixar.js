@@ -22,7 +22,7 @@ async function handleRebaixar(interaction, ceobDb) {
     // 2. Capturar parâmetros
     const alvoInput = interaction.options.getString('alvo_identificador').trim();
     const novaPatenteAbrev = interaction.options.getString('nova_patente').toUpperCase();
-    const robloxRoleId = interaction.options.getString('roblox_role_id').trim();
+    const robloxRank = interaction.options.getInteger('roblox_rank');
 
     try {
         // Como não podemos fazer deferReply e showModal juntos, precisamos resolver as validações de input
@@ -70,9 +70,9 @@ async function handleRebaixar(interaction, ceobDb) {
         }
 
         // Montar o customId limitando o tamanho (100 caracteres max).
-        // Format: rebaixar:alvoId:novaPatenteAbrev:roleId
-        // alvo.id (integer) ~ 4 chars + patente ~ 4 chars + roleId ~ 10 chars -> Bem seguro
-        const customId = `modal_rebaixar:${alvoMilitar.id}:${novaPatente.id}:${robloxRoleId}`;
+        // Format: rebaixar:alvoId:novaPatenteAbrev:robloxRank
+        // alvo.id (integer) ~ 4 chars + patente ~ 4 chars + rank ~ 3 chars -> Bem seguro
+        const customId = `modal_rebaixar:${alvoMilitar.id}:${novaPatente.id}:${robloxRank}`;
 
         if (customId.length > 100) {
             return interaction.reply({ content: '❌ Erro interno: IDs muito longos para gerar o formulário.', ephemeral: true });

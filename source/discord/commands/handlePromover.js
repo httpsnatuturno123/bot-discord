@@ -25,7 +25,7 @@ async function handlePromover(interaction, ceobDb) {
     // 2. Capturar parâmetros
     const alvoInput = interaction.options.getString('alvo_identificador').trim();
     const novaPatenteAbrev = interaction.options.getString('nova_patente').toUpperCase();
-    const robloxRoleId = interaction.options.getString('roblox_role_id').trim();
+    const robloxRank = interaction.options.getInteger('roblox_rank');
 
     try {
         // 3. Resolver ID do Roblox e buscar alvo
@@ -82,7 +82,7 @@ async function handlePromover(interaction, ceobDb) {
 
         // 6. Atualizar Roblox
         try {
-            await robloxService.promoverMembro(alvoMilitar.roblox_user_id, robloxRoleId);
+            await robloxService.promoverMembro(alvoMilitar.roblox_user_id, robloxRank);
         } catch (err) {
             console.error('Erro na integração com Roblox:', err);
             return interaction.editReply(`❌ **Falha ao atualizar o cargo no Roblox do militar:** ${err.message}\n` +
