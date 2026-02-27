@@ -280,6 +280,84 @@ function getSlashCommands() {
                     .setDescription('Motivo do desligamento')
                     .setRequired(true)
             ),
+        new SlashCommandBuilder()
+            .setName('funcao')
+            .setDescription('Gerencia e atribui funções militares por OM')
+            // SUBCOMANDO: CRIAR
+            .addSubcommand(sub => sub
+                .setName('criar')
+                .setDescription('Cria uma nova função para uma OM')
+                .addStringOption(opt =>
+                    opt.setName('nome')
+                        .setDescription('Nome da função (ex: Comandante de Pelotão)')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('om')
+                        .setDescription('Sigla da OM a qual pertence (ex: 1º BI, PE)')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('descricao')
+                        .setDescription('Descrição opcional da função')
+                        .setRequired(false)
+                )
+            )
+            // SUBCOMANDO: DELETAR
+            .addSubcommand(sub => sub
+                .setName('deletar')
+                .setDescription('Desativa permanentemente uma função da OM')
+                .addStringOption(opt =>
+                    opt.setName('nome_funcao')
+                        .setDescription('Nome exato da função a ser deletada')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('om')
+                        .setDescription('Sigla da OM à qual a função pertence')
+                        .setRequired(true)
+                )
+            )
+            // SUBCOMANDO: NOMEAR
+            .addSubcommand(sub => sub
+                .setName('nomear')
+                .setDescription('Nomeia um militar para uma função da OM')
+                .addStringOption(opt =>
+                    opt.setName('militar_identificador')
+                        .setDescription('Nome de Guerra, @Discord ou ID Roblox do militar')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('om')
+                        .setDescription('Sigla da OM')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('nome_funcao')
+                        .setDescription('Nome exato da função desejada')
+                        .setRequired(true)
+                )
+            )
+            // SUBCOMANDO: EXONERAR
+            .addSubcommand(sub => sub
+                .setName('exonerar')
+                .setDescription('Exonera um militar de uma função na OM')
+                .addStringOption(opt =>
+                    opt.setName('militar_identificador')
+                        .setDescription('Nome de Guerra, @Discord ou ID Roblox do militar')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('om')
+                        .setDescription('Sigla da OM')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('nome_funcao')
+                        .setDescription('Nome exato da função da qual ele será exonerado')
+                        .setRequired(true)
+                )
+            ),
     ].map(cmd => cmd.toJSON());
 }
 
