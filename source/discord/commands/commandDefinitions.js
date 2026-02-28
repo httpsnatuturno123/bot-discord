@@ -281,6 +281,39 @@ function getSlashCommands() {
                     .setRequired(true)
             ),
         new SlashCommandBuilder()
+            .setName('transferir_militar')
+            .setDescription('Transfere um militar de OM (Exclusivo DGP/AC)')
+            .addStringOption(opt =>
+                opt.setName('matricula')
+                    .setDescription('Matrícula do militar a ser transferido')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('om_alvo')
+                    .setDescription('Sigla da OM destino')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('motivo')
+                    .setDescription('Motivo da transferência')
+                    .setRequired(true)
+            ),
+
+        new SlashCommandBuilder()
+            .setName('transferencia_requerimento')
+            .setDescription('Solicita transferência para outra OM')
+            .addStringOption(opt =>
+                opt.setName('om_alvo')
+                    .setDescription('Sigla da OM pretendida')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
+                opt.setName('motivo')
+                    .setDescription('Motivo da solicitação de transferência')
+                    .setRequired(true)
+            ),
+
+        new SlashCommandBuilder()
             .setName('funcao')
             .setDescription('Gerencia e atribui funções militares por OM')
             // SUBCOMANDO: CRIAR

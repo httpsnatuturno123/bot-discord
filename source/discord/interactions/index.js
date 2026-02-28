@@ -2,6 +2,8 @@
 const { isRequerimentoButton, handleRequerimentoButton } = require('./buttonHandler');
 const { isRequerimentoModal, handleRequerimentoModal } = require('./modalHandler');
 const { isRebaixarModal, handleRebaixarModal } = require('./modalRebaixarHandler');
+const { isTransferenciaButton, handleTransferenciaButton } = require('./buttonTransferenciaHandler');
+const { isTransferenciaModal, handleTransferenciaModal } = require('./modalTransferenciaHandler');
 
 /**
  * Roteador central de interações (botões, modais).
@@ -13,6 +15,11 @@ async function routeInteraction(interaction, ceobDb) {
     if (interaction.isButton()) {
         if (isRequerimentoButton(interaction.customId)) {
             await handleRequerimentoButton(interaction);
+            return true;
+        }
+
+        if (isTransferenciaButton(interaction.customId)) {
+            await handleTransferenciaButton(interaction);
             return true;
         }
         return false;
@@ -27,6 +34,11 @@ async function routeInteraction(interaction, ceobDb) {
 
         if (isRebaixarModal(interaction.customId)) {
             await handleRebaixarModal(interaction, ceobDb);
+            return true;
+        }
+
+        if (isTransferenciaModal(interaction.customId)) {
+            await handleTransferenciaModal(interaction, ceobDb);
             return true;
         }
 
