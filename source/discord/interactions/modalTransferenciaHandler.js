@@ -44,7 +44,7 @@ async function handleTransferenciaModal(interaction, ceobDb) {
         const omDestinoId = reqDb.orgao_responsavel_id || (dadosExtras ? dadosExtras.omDestinoId : null);
 
         // Verifica permissão: CMD OM Destino ou Superior ou DGP ou AC
-        const executorFuncoes = await ceobDb.funcoes.listarPorMilitar(executorMilitar.id);
+        const executorFuncoes = await ceobDb.funcoes.getDoMilitar(executorMilitar.id);
         const isComandanteDaOM = executorFuncoes.some(f => f.om_id === omDestinoId && f.funcao_nome.toLowerCase().includes('comandante'));
         const pertenceDGP = await ceobDb.permissoes.pertenceAoOrgao(executorMilitar.id, 'DGP');
         const isAltoComando = await ceobDb.permissoes.isAltoComando(executorMilitar.id);

@@ -4,16 +4,33 @@
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 
+const robloxService = require('../services/robloxService');
+
 async function handleTransferenciaRequerimento(interaction, ceobDb) {
     try {
         await interaction.deferReply({ ephemeral: true });
 
-        // 1. Valida o executor do comando
+        // 1. Resolve o Roblox fornecido
+        const robloxInput = interaction.options.getString('roblox');
+        let robloxUserId = null;
+        let robloxUsername = null;
+        try {
+            const resultado = await robloxService.resolverUsuario(robloxInput);
+            robloxUserId = resultado.userId;
+            robloxUsername = resultado.username;
+        } catch (err) {
+            if (err.name === 'RobloxError') {
+                return interaction.editReply(`❌ **Bloqueado:** ${err.message}`);
+            }
+            return interaction.editReply('❌ **Falha de Comunicação:** O bot não conseguiu se conectar aos servidores do Roblox para validar o usuário.');
+        }
+
+        // 2. Valida o militar
         const executorDiscordId = interaction.user.id;
-        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+        const executorMilitar = await ceobDb.militares.getByRoblox(robloxUserId);
 
         if (!executorMilitar) {
-            return interaction.editReply('❌ Você não possui cadastro no sistema.');
+            return interaction.editReply(`❌ O usuário Roblox **${robloxUsername}** não possui cadastro no sistema como militar ativo.`);
         }
 
         if (!executorMilitar.ativo || executorMilitar.situacao_funcional === 'EXCLUIDO') {

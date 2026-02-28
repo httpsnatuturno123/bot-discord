@@ -303,6 +303,11 @@ function getSlashCommands() {
             .setName('transferencia_requerimento')
             .setDescription('Solicita transferência para outra OM')
             .addStringOption(opt =>
+                opt.setName('roblox')
+                    .setDescription('Nome de usuário ou ID numérico do Roblox')
+                    .setRequired(true)
+            )
+            .addStringOption(opt =>
                 opt.setName('om_alvo')
                     .setDescription('Sigla da OM pretendida')
                     .setRequired(true)
