@@ -171,7 +171,7 @@ async function buscarRolePorRank(groupId, rankNumber) {
  * Exemplo: 268223118 → "MjY4MjIzMTE4"
  */
 function userIdParaMembershipId(userId) {
-    return Buffer.from(String(userId)).toString('base64');
+    return Buffer.from(String(userId)).toString('base64').replace(/=+$/, '');
 }
 
 /**
