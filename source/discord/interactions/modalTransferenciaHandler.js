@@ -64,7 +64,7 @@ async function handleTransferenciaModal(interaction, ceobDb) {
 
             // Timeline
             const descricaoTimeline = `Transferência Requerida APROVADA: de ${dadosExtras.omOrigemSigla} para ${dadosExtras.omDestinoSigla}. Motivo solicitação: ${dadosExtras.motivo}. Aprovado por: ${executorMilitar.nome_guerra} - Justificativa: ${motivoDecisao}`;
-            const timelineObj = await ceobDb.timeline.registrar({
+            const timelineObj = await ceobDb.timeline.registrarEvento({
                 militarId: reqDb.solicitante_id,
                 tipoEvento: 'TRANSFERENCIA',
                 descricao: descricaoTimeline,

@@ -64,7 +64,7 @@ async function handleTransferir(interaction, ceobDb) {
 
         // 7. Registra na timeline
         const descricaoTimeline = `Transferência de OM: de ${omAtualSigla} para ${omDestino.sigla}. Motivo: ${motivo}`;
-        await ceobDb.timeline.registrar({
+        await ceobDb.timeline.registrarEvento({
             militarId: militarAlvo.id,
             tipoEvento: 'TRANSFERENCIA',
             descricao: descricaoTimeline,
