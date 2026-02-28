@@ -51,10 +51,19 @@ async function handleRequerimentoModal(interaction, ceobDb) {
             nomeGuerraFinal = interaction.fields.getTextInputValue('nome_guerra').trim();
             omSiglaFinal = interaction.fields.getTextInputValue('om_destino').trim().toUpperCase();
 
+            const embed = interaction.message.embeds[0];
+            const isRecrutamento = embed && embed.description && embed.description.includes('RECRUTAMENTO');
+
             try {
                 patenteAbrevFinal = interaction.fields.getTextInputValue('patente').trim().toUpperCase();
             } catch (e) {
-                // Em caso de ser modal antigo ou problema lendo o campo, cai para null
+                if (isRecrutamento) {
+                    patenteAbrevFinal = 'REC';
+                }
+            }
+
+            if (!patenteAbrevFinal && isRecrutamento) {
+                patenteAbrevFinal = 'REC';
             }
 
             if (!nomeGuerraFinal) {

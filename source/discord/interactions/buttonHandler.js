@@ -86,12 +86,22 @@ async function handleRequerimentoButton(interaction) {
                 .setMinLength(3)
                 .setMaxLength(1000);
 
-            modal.addComponents(
-                new ActionRowBuilder().addComponents(nomeGuerraInput),
-                new ActionRowBuilder().addComponents(omInput),
-                new ActionRowBuilder().addComponents(patenteInput),
-                new ActionRowBuilder().addComponents(motivoInput)
-            );
+            const isRecrutamento = embed && embed.description && embed.description.includes('RECRUTAMENTO');
+
+            if (isRecrutamento) {
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(nomeGuerraInput),
+                    new ActionRowBuilder().addComponents(omInput),
+                    new ActionRowBuilder().addComponents(motivoInput)
+                );
+            } else {
+                modal.addComponents(
+                    new ActionRowBuilder().addComponents(nomeGuerraInput),
+                    new ActionRowBuilder().addComponents(omInput),
+                    new ActionRowBuilder().addComponents(patenteInput),
+                    new ActionRowBuilder().addComponents(motivoInput)
+                );
+            }
         } else {
             // Modal de INDEFERIMENTO: apenas Justificativa (inalterado)
             const motivoInput = new TextInputBuilder()
