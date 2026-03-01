@@ -6,7 +6,7 @@ class MilitaresHandle {
     async getByDiscord(discordUserId) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id
@@ -20,7 +20,7 @@ class MilitaresHandle {
     async getById(militarId) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id
@@ -34,7 +34,7 @@ class MilitaresHandle {
     async getByDiscordAny(discordUserId) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id
@@ -48,7 +48,7 @@ class MilitaresHandle {
     async getByRoblox(robloxUserId) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id
@@ -62,7 +62,7 @@ class MilitaresHandle {
     async getByRobloxAny(robloxUserId) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id
@@ -76,7 +76,7 @@ class MilitaresHandle {
     async getByMatricula(matricula) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id
@@ -90,7 +90,7 @@ class MilitaresHandle {
     async getByNomeGuerra(nomeGuerra) {
         const { rows } = await this.connection.query(
             `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id
@@ -127,7 +127,7 @@ class MilitaresHandle {
             `SELECT m.id, m.matricula, m.nome_guerra, m.roblox_user_id, m.roblox_username,
                     m.discord_user_id, m.ativo, m.data_ingresso, m.data_ultima_promocao,
                     p.nome AS patente_nome, p.abreviacao AS patente_abrev,
-                    p.ordem_precedencia, p.circulo,
+                    p.ordem_precedencia, p.circulo, p.is_oficial,
                     om.nome AS om_nome, om.sigla AS om_sigla
              FROM ceob.militares m
              JOIN ceob.patentes p ON m.patente_id = p.id

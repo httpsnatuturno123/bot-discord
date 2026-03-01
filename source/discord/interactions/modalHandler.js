@@ -26,6 +26,9 @@ async function handleRequerimentoModal(interaction, ceobDb) {
         const requerimentoId = interaction.customId.replace(prefixo, '');
         const statusFinal = isAprovacao ? 'APROVADO' : 'INDEFERIDO';
 
+        let requerimento = null;
+        let dadosAlvo = null;
+
         await interaction.deferReply({ ephemeral: true });
 
         const motivoDecisao = interaction.fields.getTextInputValue('motivo_decisao');
@@ -92,8 +95,68 @@ async function handleRequerimentoModal(interaction, ceobDb) {
             );
         }
 
+        // ── Ativa militar e Integração Roblox (SE APROVADO) ──
+        let feedbackRoblox = '';
+
+        if (isAprovacao) {
+            // ── Busca dados do alvo (agora com OM atualizada) ──
+            dadosAlvo = await requerimentoService.buscarDadosMilitarAlvo(ceobDb, requerimentoPreview.militar_alvo_id);
+            const robloxUserId = dadosAlvo?.robloxUserId || requerimentoPreview.dados_extras?.roblox_user_id;
+
+            if (robloxUserId) {
+                // Passa o rank da patente para o Roblox Service
+                let patenteRankNumber = null;
+                if (patenteAbrevFinal) {
+                    const patenteFinal = await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal);
+                    patenteRankNumber = patenteFinal ? patenteFinal.ordem_precedencia : null;
+                }
+
+                const resultadoRoblox = await robloxService.aceitarEmGrupos(robloxUserId, omSiglaFinal, patenteRankNumber);
+
+                const isRecrutamento = interaction.message.embeds[0]?.description?.includes('RECRUTAMENTO');
+
+                // VALIDAÇÃO RIGOROSA: Se for recrutamento e falhou no grupo principal ou da OM por falta de solicitação
+                if (isRecrutamento) {
+                    const resPrincipal = resultadoRoblox.resultados.find(r => r.grupo === robloxService.GRUPO_PRINCIPAL);
+                    if (resPrincipal && !resPrincipal.sucesso && resPrincipal.detalhe.includes('não enviou solicitação')) {
+                        return interaction.editReply(`❌ **Aprovação Cancelada:** O recrutado ainda não solicitou entrada no grupo principal do Roblox (${robloxService.GRUPO_PRINCIPAL}).\nPeça para ele solicitar a entrada e tente aprovar novamente.`);
+                    }
+
+                    const grupoOmId = robloxService.OM_GRUPO_MAP[omSiglaFinal];
+                    if (grupoOmId) {
+                        const resOm = resultadoRoblox.resultados.find(r => r.grupo === String(grupoOmId));
+                        if (resOm && !resOm.sucesso && resOm.detalhe.includes('não enviou solicitação')) {
+                            return interaction.editReply(`❌ **Aprovação Cancelada:** O recrutado ainda não solicitou entrada no subgrupo da OM **${omSiglaFinal}** (${grupoOmId}).\nPeça para ele solicitar a entrada e tente aprovar novamente.`);
+                        }
+                    }
+                }
+
+                // Montar feedback detalhado por grupo
+                const linhasFeedback = resultadoRoblox.resultados.map(r => {
+                    if (r.sucesso) {
+                        return `✅ Grupo \`${r.grupo}\`: ${r.detalhe}`;
+                    } else {
+                        return `❌ Grupo \`${r.grupo}\`: ${r.detalhe}${r.erro ? ` — ${r.erro}` : ''}`;
+                    }
+                });
+
+                const falhas = resultadoRoblox.resultados.filter(r => !r.sucesso);
+                if (falhas.length > 0) {
+                    feedbackRoblox = `\n\n⚠️ **Atenção — Integração Roblox (falhas detectadas):**\n${linhasFeedback.join('\n')}`;
+                    console.warn(`⚠️ Falhas na integração Roblox para requerimento #${requerimentoId}:`, falhas);
+                } else {
+                    feedbackRoblox = `\n\n🟢 **Integração Roblox:**\n${linhasFeedback.join('\n')}`;
+                }
+            } else {
+                feedbackRoblox = '\n\n⚠️ **Atenção:** Roblox User ID não encontrado. A integração com grupos foi **pulada**.';
+            }
+
+            // Ativar apenas após passar pela validação do Roblox (se aplicável)
+            await requerimentoService.ativarMilitar(ceobDb, requerimentoPreview.militar_alvo_id);
+        }
+
         // ── Atualiza requerimento ──
-        const requerimento = await ceobDb.requerimentos.atualizar(requerimentoId, {
+        requerimento = await ceobDb.requerimentos.atualizar(requerimentoId, {
             status: statusFinal,
             analisadoPorId: analistaMilitar.id,
             motivoDecisao,
@@ -104,60 +167,15 @@ async function handleRequerimentoModal(interaction, ceobDb) {
             return interaction.editReply('❌ Falha ao atualizar o requerimento.');
         }
 
-        // ── Busca dados do alvo (agora com OM atualizada) ──
-        const dadosAlvo = await requerimentoService.buscarDadosMilitarAlvo(ceobDb, requerimento.militar_alvo_id);
-
-        // ── Ativa militar se aprovado ──
-        let feedbackRoblox = '';
-
-        if (isAprovacao) {
-            await requerimentoService.ativarMilitar(ceobDb, requerimento.militar_alvo_id);
-
-            // ── Integração Roblox: aceitar em grupos ──
-            try {
-                const robloxUserId = dadosAlvo?.robloxUserId || requerimentoPreview.dados_extras?.roblox_user_id;
-
-                if (robloxUserId) {
-                    // Passa o rank da patente para o Roblox Service
-                    let patenteRankNumber = null;
-                    if (patenteAbrevFinal) {
-                        const patenteFinal = await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal);
-                        patenteRankNumber = patenteFinal ? patenteFinal.ordem_precedencia : null;
-                    }
-                    const resultadoRoblox = await robloxService.aceitarEmGrupos(robloxUserId, omSiglaFinal, patenteRankNumber);
-
-                    // Montar feedback detalhado por grupo
-                    const linhasFeedback = resultadoRoblox.resultados.map(r => {
-                        if (r.sucesso) {
-                            return `✅ Grupo \`${r.grupo}\`: ${r.detalhe}`;
-                        } else {
-                            return `❌ Grupo \`${r.grupo}\`: ${r.detalhe}${r.erro ? ` — ${r.erro}` : ''}`;
-                        }
-                    });
-
-                    const falhas = resultadoRoblox.resultados.filter(r => !r.sucesso);
-                    if (falhas.length > 0) {
-                        feedbackRoblox = `\n\n⚠️ **Atenção — Integração Roblox (falhas detectadas):**\n${linhasFeedback.join('\n')}`;
-                        console.warn(`⚠️ Falhas na integração Roblox para requerimento #${requerimentoId}:`, falhas);
-                    } else {
-                        feedbackRoblox = `\n\n🟢 **Integração Roblox:**\n${linhasFeedback.join('\n')}`;
-                    }
-                } else {
-                    feedbackRoblox = '\n\n⚠️ **Atenção:** Roblox User ID não encontrado nos dados do requerimento. A integração com grupos Roblox foi **pulada**.';
-                    console.warn(`⚠️ Roblox User ID não encontrado nos dados extras do requerimento #${requerimentoId}. Integração com grupos pulada.`);
-                }
-            } catch (err) {
-                feedbackRoblox = `\n\n❌ **Erro na integração Roblox:** ${err.message}`;
-                console.error(`❌ Erro na integração Roblox (requerimento #${requerimentoId}):`, err);
-            }
-        }
+        // ── Busca dados finais do alvo ──
+        const dadosAlvoFinais = await requerimentoService.buscarDadosMilitarAlvo(ceobDb, requerimento.militar_alvo_id);
 
         // ── Registra na timeline ──
         const timelineEvento = await requerimentoService.registrarTimelineRequerimento(ceobDb, {
             requerimentoId,
             requerimento,
             analistaId: analistaMilitar.id,
-            nomeMilitarAlvo: dadosAlvo.nomeGuerra,
+            nomeMilitarAlvo: dadosAlvoFinais.nomeGuerra,
             motivoDecisao,
             isAprovacao
         });
@@ -165,9 +183,9 @@ async function handleRequerimentoModal(interaction, ceobDb) {
         // ── Gera e publica boletim ──
         const conteudoBoletim = boletimService.gerarConteudoBoletim({
             isAprovacao,
-            patenteNome: patenteAbrevFinal ? (await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal)).nome : dadosAlvo.patenteNome,
-            nomeGuerra: dadosAlvo.nomeGuerra,
-            omSigla: dadosAlvo.omSigla,
+            patenteNome: patenteAbrevFinal ? (await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal)).nome : dadosAlvoFinais.patenteNome,
+            nomeGuerra: dadosAlvoFinais.nomeGuerra,
+            omSigla: dadosAlvoFinais.omSigla,
             analistaMilitar,
             motivoDecisao
         });
@@ -176,7 +194,7 @@ async function handleRequerimentoModal(interaction, ceobDb) {
             conteudo: conteudoBoletim,
             requerimentoId,
             timelineEventoId: timelineEvento.id,
-            nomeMilitarAlvo: dadosAlvo.nomeGuerra,
+            nomeMilitarAlvo: dadosAlvoFinais.nomeGuerra,
             analistaMilitar,
             isAprovacao
         });
@@ -198,16 +216,14 @@ async function handleRequerimentoModal(interaction, ceobDb) {
         }
 
         // ── Resposta final ──
-        const verbo = isAprovacao ? 'aprovado' : 'indeferido';
-
         if (isAprovacao) {
             await interaction.editReply(
-                `✅ Requerimento **#${requerimentoId}** ${verbo}. O militar **${dadosAlvo.nomeGuerra}** foi ativado na OM **${omSiglaFinal}**. Boletim **${boletim.numero}** publicado.${feedbackRoblox}`
+                `✅ Requerimento **#${requerimentoId}** aprovado. O militar **${dadosAlvoFinais.nomeGuerra}** foi ativado na OM **${omSiglaFinal}**. Boletim **${boletim.numero}** publicado.${feedbackRoblox}`
             );
         } else {
             const complemento = 'O registro pendente foi removido';
             await interaction.editReply(
-                `❌ Requerimento **#${requerimentoId}** ${verbo}. ${complemento} e o boletim **${boletim.numero}** foi publicado.`
+                `❌ Requerimento **#${requerimentoId}** indeferido. ${complemento} e o boletim **${boletim.numero}** foi publicado.`
             );
         }
 

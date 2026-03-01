@@ -36,8 +36,8 @@ async function handleCursoAplicar(interaction, ceobDb) {
             (t.descricao.toUpperCase().includes('CFS') || t.descricao.toUpperCase().includes('FORMAÇÃO DE SARGENTOS'))
         );
 
-        if (!isSupremo && !temCfsEstruturado && !temCfsTimeline) {
-            return interaction.reply({ content: '❌ Apenas militares com o curso **CFS** concluído (ou membros do Comando Supremo) podem aplicar cursos.', ephemeral: true });
+        if (!isSupremo && !instrutor.is_oficial && !temCfsEstruturado && !temCfsTimeline) {
+            return interaction.reply({ content: '❌ Apenas **Oficiais** ou militares com o curso **CFS** concluído podem aplicar cursos.', ephemeral: true });
         }
 
         // 2. Criação do Modal
