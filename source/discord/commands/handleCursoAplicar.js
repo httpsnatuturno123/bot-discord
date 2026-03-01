@@ -22,6 +22,9 @@ async function handleCursoAplicar(interaction, ceobDb) {
             return interaction.reply({ content: '❌ Apenas militares em situação ATIVA podem aplicar cursos.', ephemeral: true });
         }
 
+        // 2. Validação de Exceção: Comando Supremo ignora a trava de curso
+        const isSupremo = await ceobDb.permissoes.isComandoSupremo(instrutor.id);
+
         // Verifica se possui o curso CFS (pela sigla na tabela estruturada ou pela descrição na timeline como fallback)
         const cursosMilitar = await ceobDb.militarCursos.getDoMilitar(instrutor.id);
         const temCfsEstruturado = cursosMilitar.some(c => c.curso_sigla === 'CFS' && c.status_aluno === 'APROVADO');
@@ -33,8 +36,8 @@ async function handleCursoAplicar(interaction, ceobDb) {
             (t.descricao.toUpperCase().includes('CFS') || t.descricao.toUpperCase().includes('FORMAÇÃO DE SARGENTOS'))
         );
 
-        if (!temCfsEstruturado && !temCfsTimeline) {
-            return interaction.reply({ content: '❌ Apenas militares com o curso **CFS** concluído podem aplicar cursos.', ephemeral: true });
+        if (!isSupremo && !temCfsEstruturado && !temCfsTimeline) {
+            return interaction.reply({ content: '❌ Apenas militares com o curso **CFS** concluído (ou membros do Comando Supremo) podem aplicar cursos.', ephemeral: true });
         }
 
         // 2. Criação do Modal
