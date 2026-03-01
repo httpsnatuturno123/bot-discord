@@ -80,11 +80,11 @@ async function handleCursoButton(interaction, ceobDb) {
                 await ceobDb.militarCursos.finalizarCurso(militar.id, curso.id, 'APROVADO');
 
                 // Registro na Timeline
-                await ceobDb.timeline.create({
+                await ceobDb.timeline.registrarEvento({
                     militarId: militar.id,
                     tipoEvento: 'CONCLUSAO_CURSO',
                     descricao: `Concluiu com aproveitamento o ${cursoSigla} (${mesAno}). Instrutor: ${instrutor.nome_guerra}.`,
-                    autorId: instrutor.id
+                    executadoPorId: instrutor.id
                 });
 
                 // Promoção Automática
@@ -97,7 +97,7 @@ async function handleCursoButton(interaction, ceobDb) {
 
                 if (novaPatente) {
                     // Update DB
-                    await ceobDb.militares.updatePatente(militar.id, novaPatente.id);
+                    await ceobDb.militares.atualizarPatente(militar.id, novaPatente.id);
 
                     // Update Roblox
                     const robloxRank = PATENTE_ROBLOX_RANK_MAP[novaPatente.ordem_precedencia];

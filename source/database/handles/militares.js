@@ -87,6 +87,20 @@ class MilitaresHandle {
         return rows[0] || null;
     }
 
+    async getByNomeGuerra(nomeGuerra) {
+        const { rows } = await this.connection.query(
+            `SELECT m.*, p.nome AS patente_nome, p.abreviacao AS patente_abrev,
+                    p.ordem_precedencia, p.circulo,
+                    om.nome AS om_nome, om.sigla AS om_sigla
+             FROM ceob.militares m
+             JOIN ceob.patentes p ON m.patente_id = p.id
+             JOIN ceob.organizacoes_militares om ON m.om_lotacao_id = om.id
+             WHERE m.nome_guerra = $1 AND m.ativo = true`,
+            [nomeGuerra]
+        );
+        return rows[0] || null;
+    }
+
     async criar({ nomeGuerra, robloxUserId, robloxUsername, discordUserId, patenteId, omLotacaoId }) {
         const { rows } = await this.connection.query(
             `INSERT INTO ceob.militares
