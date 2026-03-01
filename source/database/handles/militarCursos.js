@@ -23,9 +23,9 @@ class MilitarCursosHandle {
     async finalizarCurso(militarId, cursoId, status, nota = null) {
         const { rows } = await this.connection.query(
             `UPDATE ceob.militar_cursos 
-             SET status_aluno = $1, 
+             SET status_aluno = $1::ceob.status_aluno_enum, 
                  nota_final = $2, 
-                 data_conclusao = CASE WHEN $1 = 'APROVADO' THEN CURRENT_DATE ELSE data_conclusao END,
+                 data_conclusao = CASE WHEN $1::text = 'APROVADO' THEN CURRENT_DATE ELSE data_conclusao END,
                  updated_at = NOW()
              WHERE militar_id = $3 AND curso_id = $4
              RETURNING *`,
