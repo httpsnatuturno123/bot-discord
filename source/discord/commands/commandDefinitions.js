@@ -396,6 +396,14 @@ function getSlashCommands() {
                         .setRequired(true)
                 )
             ),
+
+        new SlashCommandBuilder()
+            .setName('curso')
+            .setDescription('Gerencia o sistema de cursos')
+            .addSubcommand(sub => sub
+                .setName('aplicar')
+                .setDescription('Abre o formulário para aplicar um curso (CFS/CFSd/CFC/etc)')
+            ),
     ].map(cmd => cmd.toJSON());
 }
 

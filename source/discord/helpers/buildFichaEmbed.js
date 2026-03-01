@@ -13,6 +13,13 @@ function buildFichaEmbed(ficha) {
         ? ficha.funcoes.map(f => `${f.funcao_nome} (${f.om_sigla})`).join('\n')
         : 'Nenhuma';
 
+    const cursosStr = ficha.cursos.length > 0
+        ? ficha.cursos.map(c => {
+            const statusIcon = c.status_aluno === 'APROVADO' ? '✅' : (c.status_aluno === 'REPROVADO' ? '❌' : '⏳');
+            return `${statusIcon} **${c.curso_sigla}** (${c.turma})`;
+        }).join('\n')
+        : 'Nenhum';
+
     const timelineStr = ficha.timeline.slice(0, 5).map(t => {
         const data = new Date(t.created_at).toLocaleDateString('pt-BR');
         return `\`${data}\` ${t.tipo_evento} — ${t.descricao}`;
@@ -29,6 +36,7 @@ function buildFichaEmbed(ficha) {
             { name: 'Ingresso', value: new Date(m.data_ingresso).toLocaleDateString('pt-BR'), inline: true },
             { name: 'Roblox ID', value: String(m.roblox_user_id), inline: true },
             { name: '── Funções Ativas ──', value: funcoesStr, inline: false },
+            { name: '── Cursos e Turmas ──', value: cursosStr, inline: false },
             { name: '── Últimos Eventos ──', value: timelineStr, inline: false },
         ],
         footer: { text: `ID interno: ${m.id} | Círculo: ${m.circulo}` }

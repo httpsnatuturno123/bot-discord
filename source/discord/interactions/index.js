@@ -5,9 +5,11 @@ const { isRebaixarModal, handleRebaixarModal } = require('./modalRebaixarHandler
 const { isTransferenciaButton, handleTransferenciaButton } = require('./buttonTransferenciaHandler');
 const { isTransferenciaModal, handleTransferenciaModal } = require('./modalTransferenciaHandler');
 
+const { isCursoAplicarModal, handleCursoAplicarModal } = require('./handleCursoAplicarModal');
+const { isCursoButton, handleCursoButton } = require('./handleCursoButton');
+
 /**
  * Roteador central de interações (botões, modais).
- * Retorna true se a interação foi tratada, false caso contrário.
  */
 async function routeInteraction(interaction, ceobDb) {
 
@@ -22,6 +24,12 @@ async function routeInteraction(interaction, ceobDb) {
             await handleTransferenciaButton(interaction);
             return true;
         }
+
+        if (isCursoButton(interaction.customId)) {
+            await handleCursoButton(interaction, ceobDb);
+            return true;
+        }
+
         return false;
     }
 
@@ -39,6 +47,11 @@ async function routeInteraction(interaction, ceobDb) {
 
         if (isTransferenciaModal(interaction.customId)) {
             await handleTransferenciaModal(interaction, ceobDb);
+            return true;
+        }
+
+        if (isCursoAplicarModal(interaction.customId)) {
+            await handleCursoAplicarModal(interaction, ceobDb);
             return true;
         }
 

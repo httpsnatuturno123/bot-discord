@@ -20,10 +20,21 @@ class FichaHandle {
         const funcoes = await this.funcoesHandle.getDoMilitar(militarId);
         const timeline = await this.timelineHandle.getDoMilitar(militarId);
 
+        // Novo: Busca os cursos estruturados
+        const { rows: cursos } = await this.connection.query(
+            `SELECT mc.*, c.nome AS curso_nome, c.sigla AS curso_sigla, c.turma
+             FROM ceob.militar_cursos mc
+             JOIN ceob.cursos c ON mc.curso_id = c.id
+             WHERE mc.militar_id = $1
+             ORDER BY mc.data_conclusao DESC NULLS FIRST`,
+            [militarId]
+        );
+
         return {
             militar: rows[0] || null,
             funcoes,
-            timeline
+            timeline,
+            cursos // Adicionado ao retorno
         };
     }
 }
