@@ -56,7 +56,8 @@ async function handleTransferir(interaction, ceobDb) {
         const omAtualRows = await ceobDb.connection.query(`SELECT sigla FROM ceob.organizacoes_militares WHERE id = $1`, [militarAlvo.om_lotacao_id]);
         const omAtualSigla = omAtualRows.rows[0] ? omAtualRows.rows[0].sigla : 'Sem OM';
 
-        // 6. Atualiza o militar para a nova OM (Sem mexer nas funções dele que ficam a cargo do comandante/DGP dps tratar)
+        // 6. Atualiza o militar para a nova OM e exonera das funções da OM antiga
+        await ceobDb.funcoes.exonerarTodas(militarAlvo.id);
         await ceobDb.connection.query(
             `UPDATE ceob.militares SET om_lotacao_id = $1, updated_at = NOW() WHERE id = $2`,
             [omDestino.id, militarAlvo.id]

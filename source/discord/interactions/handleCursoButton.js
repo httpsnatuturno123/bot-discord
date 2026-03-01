@@ -35,7 +35,7 @@ async function handleCursoButton(interaction, ceobDb) {
 
             for (const linha of linhas) {
                 // Regex para extrair Patente, NomeGuerra e Username
-                const match = linha.match(/• (\w+) \*\*(.+)\*\* \((.+)\) - (✅|❌)/);
+                const match = linha.match(/• (.+?) \*\*(.+)\*\* \((.+)\) - (✅|❌)/);
                 if (match) {
                     const [_, patenteAbrev, nomeGuerra, username, icon] = match;
                     if (icon === '✅') {

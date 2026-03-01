@@ -56,7 +56,8 @@ async function handleTransferenciaModal(interaction, ceobDb) {
 
         // Processa
         if (isAprovacao) {
-            // Atualiza OM
+            // Atualiza OM e exonera das funções anteriores
+            await ceobDb.funcoes.exonerarTodas(reqDb.solicitante_id);
             await ceobDb.connection.query(
                 `UPDATE ceob.militares SET om_lotacao_id = $1, updated_at = NOW() WHERE id = $2`,
                 [omDestinoId, reqDb.solicitante_id]

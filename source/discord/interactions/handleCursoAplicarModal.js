@@ -100,7 +100,7 @@ async function handleCursoAplicarModal(interaction, ceobDb) {
 
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder()
-                .setCustomId(`curso_confirmar_${interaction.user.id}_${cursoNome}`)
+                .setCustomId(`curso_confirmar_${interaction.user.id}_${cursoNome.substring(0, 60)}`)
                 .setLabel('Aprovar e Integrar')
                 .setStyle(ButtonStyle.Success),
             new ButtonBuilder()
