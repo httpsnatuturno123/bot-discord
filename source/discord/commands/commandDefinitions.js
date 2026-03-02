@@ -479,6 +479,12 @@ function getSlashCommands() {
                         .setDescription('Discord do coordenador da turma')
                         .setRequired(true)
                 )
+                .addStringOption(opt =>
+                    opt.setName('om')
+                        .setDescription('Sigla da OM vinculada à turma')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
                 .addUserOption(opt =>
                     opt.setName('instrutor')
                         .setDescription('Discord do instrutor (padrão: Não Definido)')
@@ -488,12 +494,6 @@ function getSlashCommands() {
                     opt.setName('auxiliar')
                         .setDescription('Discord do auxiliar (padrão: Não Definido)')
                         .setRequired(false)
-                )
-                .addStringOption(opt =>
-                    opt.setName('om')
-                        .setDescription('Sigla da OM vinculada à turma')
-                        .setRequired(true)
-                        .setAutocomplete(true)
                 )
             )
             // SUBCOMANDO: INTEGRAR
