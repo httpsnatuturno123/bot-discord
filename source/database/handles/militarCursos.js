@@ -39,11 +39,12 @@ class MilitarCursosHandle {
      */
     async getDoMilitar(militarId) {
         const { rows } = await this.connection.query(
-            `SELECT mc.*, c.nome AS curso_nome, c.sigla AS curso_sigla, c.turma,
+            `SELECT mc.*, c.nome AS curso_nome, c.sigla AS curso_sigla, t.identificador_turma AS turma,
                     coord.nome_guerra AS coordenador_nome
              FROM ceob.militar_cursos mc
-             JOIN ceob.cursos c ON mc.curso_id = c.id
-             JOIN ceob.militares coord ON c.coordenador_id = coord.id
+             JOIN ceob.turmas t ON mc.curso_id = t.id
+             JOIN ceob.catalogo_cursos c ON t.curso_id = c.id
+             JOIN ceob.militares coord ON t.coordenador_id = coord.id
              WHERE mc.militar_id = $1
              ORDER BY mc.created_at DESC`,
             [militarId]

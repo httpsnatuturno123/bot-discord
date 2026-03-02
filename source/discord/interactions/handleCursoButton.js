@@ -2,21 +2,36 @@ const { EmbedBuilder } = require('discord.js');
 const { promoverMembro, PATENTE_ROBLOX_RANK_MAP } = require('../services/robloxService');
 
 const CUSTOM_ID_PREFIX = 'curso_';
+const TURMA_ENCERRAR_PREFIX = 'turmaencerrar_';
 
 function isCursoButton(customId) {
-    return customId.startsWith(CUSTOM_ID_PREFIX);
+    return customId.startsWith(CUSTOM_ID_PREFIX) || customId.startsWith(TURMA_ENCERRAR_PREFIX);
 }
 
 /**
  * Processa cliques nos botões de Aprovar/Rejeitar do DGP
  */
 async function handleCursoButton(interaction, ceobDb) {
-    const [_, acao, instrutorDiscordId, cursoSigla] = interaction.customId.split('_');
+    const customIdParts = interaction.customId.split('_');
+    const tipoBotao = customIdParts[0]; // 'curso' ou 'turmaencerrar'
+    const acao = customIdParts[1]; // 'confirmar' ou 'rejeitar'
+
+    // O restante dos parâmetros muda dependendo da origem:
+    // curso_: curso_acao_instrutorDiscordId_cursoSigla
+    // turmaencerrar_: turmaencerrar_acao_turmaId
+    const param3 = customIdParts[2];
+    const param4 = customIdParts[3];
 
     if (acao === 'rejeitar') {
+        const embedOriginal = interaction.message.embeds[0];
+
+        // Se for encerramento de turma, talvez seja bom voltar a turma pra EM_ANDAMENTO
+        // Porém como a turma só gera requerimento, ela ainda está EM_ANDAMENTO aguardando.
+        // A rigor não precisa mudar status no banco, apenas avisar rejeição.
+
         return interaction.update({
             content: `❌ Requerimento rejeitado por **${interaction.user.username}**.`,
-            embeds: interaction.message.embeds.map(e => EmbedBuilder.from(e).setColor(0xFF0000)),
+            embeds: [EmbedBuilder.from(embedOriginal).setColor(0xFF0000)],
             components: []
         });
     }
@@ -46,26 +61,64 @@ async function handleCursoButton(interaction, ceobDb) {
                 }
             }
 
-            // 1. Criar ou Buscar Turma Automática
-            const agora = new Date();
-            const mesAno = agora.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).toUpperCase();
-            const turmaNome = `${cursoSigla} [${mesAno}]`;
+            // 1. Identificar Turma e Curso
+            let turma = null;
+            let curso = null;
+            let instrutor = null;
+            let mesAno = '';
+            let cursoSigla = '';
 
-            // Garante que o instrutor existe (pelo Discord ID salvo no customId)
-            const instrutor = await ceobDb.militares.getByDiscord(instrutorDiscordId);
+            if (tipoBotao === 'turmaencerrar') {
+                const turmaId = parseInt(param3, 10);
+                turma = await ceobDb.turmas.getById(turmaId);
 
-            let curso = (await ceobDb.cursos.listar()).find(c => c.sigla === cursoSigla && c.turma === mesAno);
+                if (!turma) {
+                    return interaction.followUp({ content: `❌ Turma #${turmaId} não encontrada no banco de dados.`, ephemeral: true });
+                }
 
-            if (!curso) {
-                curso = await ceobDb.cursos.criar({
-                    nome: `Curso de ${cursoSigla} - Automatizado`,
-                    sigla: cursoSigla,
-                    turma: mesAno,
-                    coordenadorId: instrutor.id,
-                    instrutorId: instrutor.id,
-                    auxiliarId: instrutor.id,
-                    status: 'ENCERRADO'
-                });
+                curso = await ceobDb.catalogoCursos.getBySigla(turma.sigla);
+                instrutor = await ceobDb.militares.getById(turma.coordenador_id);
+                mesAno = turma.identificador_turma;
+                cursoSigla = turma.sigla;
+
+            } else {
+                // Fluxo Legado /curso aplicar
+                const instrutorDiscordId = param3;
+                cursoSigla = param4;
+
+                const agora = new Date();
+                mesAno = agora.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' }).toUpperCase();
+
+                instrutor = await ceobDb.militares.getByDiscord(instrutorDiscordId);
+
+                if (!instrutor) {
+                    return interaction.followUp({ content: `❌ Instrutor original não encontrado.`, ephemeral: true });
+                }
+
+                curso = await ceobDb.catalogoCursos.getBySigla(cursoSigla);
+                if (!curso) {
+                    curso = await ceobDb.catalogoCursos.criar({
+                        nome: `Curso de ${cursoSigla}`,
+                        sigla: cursoSigla
+                    });
+                }
+
+                turma = await ceobDb.turmas.getBySiglaETurma(cursoSigla, mesAno);
+
+                if (!turma) {
+                    turma = await ceobDb.turmas.criar({
+                        cursoId: curso.id,
+                        identificadorTurma: mesAno,
+                        coordenadorId: instrutor.id,
+                        instrutorId: instrutor.id,
+                        auxiliarId: instrutor.id
+                    });
+                }
+            }
+
+            // Garante que a turma ficará como ENCERRADO
+            if (turma.status !== 'ENCERRADO') {
+                await ceobDb.turmas.encerrar(turma.id);
             }
 
             const logsResumo = [];
@@ -76,8 +129,8 @@ async function handleCursoButton(interaction, ceobDb) {
                 if (!militar) continue;
 
                 // Matrícula e Finalização
-                await ceobDb.militarCursos.matricular(militar.id, curso.id);
-                await ceobDb.militarCursos.finalizarCurso(militar.id, curso.id, 'APROVADO');
+                await ceobDb.militarCursos.matricular(militar.id, turma.id);
+                await ceobDb.militarCursos.finalizarCurso(militar.id, turma.id, 'APROVADO');
 
                 // Registro na Timeline
                 await ceobDb.timeline.registrarEvento({
@@ -119,8 +172,8 @@ async function handleCursoButton(interaction, ceobDb) {
                 const militar = await ceobDb.militares.getByNomeGuerra(aluno.nomeGuerra);
                 if (!militar) continue;
 
-                await ceobDb.militarCursos.matricular(militar.id, curso.id);
-                await ceobDb.militarCursos.finalizarCurso(militar.id, curso.id, 'REPROVADO');
+                await ceobDb.militarCursos.matricular(militar.id, turma.id);
+                await ceobDb.militarCursos.finalizarCurso(militar.id, turma.id, 'REPROVADO');
                 logsResumo.push(`❌ **${militar.nome_guerra}**: Reprovado.`);
             }
 

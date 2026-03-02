@@ -29,6 +29,8 @@ const handleFuncao = require('./commands/handleFuncao');
 const handleTransferir = require('./commands/handleTransferir');
 const handleTransferenciaRequerimento = require('./commands/handleTransferenciaRequerimento');
 const handleCursoAplicar = require('./commands/handleCursoAplicar');
+const { handleCatalogo } = require('./commands/handleCatalogo');
+const { handleTurma } = require('./commands/handleTurma');
 
 // Handler legado (prefixo)
 const handleBanLegado = require('./commands/handleBanLegado');
@@ -77,6 +79,8 @@ class DiscordBot {
             'transferir_militar': (i) => handleTransferir(i, db),
             'transferencia_requerimento': (i) => handleTransferenciaRequerimento(i, db),
             'curso': (i) => handleCursoAplicar(i, db),
+            'catalogo': (i) => handleCatalogo(i, db),
+            'turma': (i) => handleTurma(i, db),
         };
     }
 

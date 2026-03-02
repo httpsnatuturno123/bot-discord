@@ -404,6 +404,142 @@ function getSlashCommands() {
                 .setName('aplicar')
                 .setDescription('Abre o formulário para aplicar um curso (CFS/CFSd/CFC/etc)')
             ),
+
+        new SlashCommandBuilder()
+            .setName('catalogo')
+            .setDescription('Gerencia o catálogo de cursos institucionais')
+            // SUBCOMANDO: CRIAR
+            .addSubcommand(sub => sub
+                .setName('criar')
+                .setDescription('Registra um novo curso referencial no catálogo institucional')
+                .addStringOption(opt =>
+                    opt.setName('nome')
+                        .setDescription('Nome completo do curso (ex: Curso de Formação de Sargentos)')
+                        .setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('sigla')
+                        .setDescription('Sigla única do curso (ex: CFS)')
+                        .setRequired(true)
+                )
+            )
+            // SUBCOMANDO: LISTAR
+            .addSubcommand(sub => sub
+                .setName('listar')
+                .setDescription('Exibe o portfólio completo de cursos do catálogo')
+                .addBooleanOption(opt =>
+                    opt.setName('mostrar_arquivados')
+                        .setDescription('Se verdadeiro, inclui cursos inativos na listagem')
+                        .setRequired(false)
+                )
+            )
+            // SUBCOMANDO: ARQUIVAR
+            .addSubcommand(sub => sub
+                .setName('arquivar')
+                .setDescription('Desativa um curso do catálogo (soft-delete)')
+                .addStringOption(opt =>
+                    opt.setName('sigla')
+                        .setDescription('Sigla do curso a ser arquivado')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
+            )
+            // SUBCOMANDO: REATIVAR
+            .addSubcommand(sub => sub
+                .setName('reativar')
+                .setDescription('Restaura um curso arquivado de volta ao catálogo')
+                .addStringOption(opt =>
+                    opt.setName('sigla')
+                        .setDescription('Sigla do curso a ser reativado')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
+            ),
+
+        new SlashCommandBuilder()
+            .setName('turma')
+            .setDescription('Gerencia turmas de cursos institucionais')
+            // SUBCOMANDO: ABRIR
+            .addSubcommand(sub => sub
+                .setName('abrir')
+                .setDescription('Abre (instancia) uma nova turma de um curso ativo do catálogo')
+                .addStringOption(opt =>
+                    opt.setName('sigla_curso')
+                        .setDescription('Sigla do curso (deve existir e estar ativo no catálogo)')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('nome_turma')
+                        .setDescription('Identificador/nome da turma (ex: Alfa, Bravo, Turma 1)')
+                        .setRequired(true)
+                )
+                .addUserOption(opt =>
+                    opt.setName('coordenador')
+                        .setDescription('Discord do coordenador (padrão: você)')
+                        .setRequired(false)
+                )
+                .addUserOption(opt =>
+                    opt.setName('instrutor')
+                        .setDescription('Discord do instrutor (padrão: você)')
+                        .setRequired(false)
+                )
+                .addUserOption(opt =>
+                    opt.setName('auxiliar')
+                        .setDescription('Discord do auxiliar (padrão: você)')
+                        .setRequired(false)
+                )
+                .addStringOption(opt =>
+                    opt.setName('om')
+                        .setDescription('Sigla da OM vinculada à turma (opcional)')
+                        .setRequired(false)
+                        .setAutocomplete(true)
+                )
+            )
+            // SUBCOMANDO: INTEGRAR
+            .addSubcommand(sub => sub
+                .setName('integrar')
+                .setDescription('Matricula ou finaliza alunos dentro de uma turma aberta')
+                .addStringOption(opt =>
+                    opt.setName('turma_id')
+                        .setDescription('ID da turma em andamento ou planejada')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
+            )
+            // SUBCOMANDO: ENCERRAR
+            .addSubcommand(sub => sub
+                .setName('encerrar')
+                .setDescription('Encerra e aprova oficialmente uma turma')
+                .addStringOption(opt =>
+                    opt.setName('turma_id')
+                        .setDescription('ID da turma a ser encerrada')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('motivo')
+                        .setDescription('Motivo ou observação adicional do encerramento')
+                        .setRequired(false)
+                )
+            )
+            // SUBCOMANDO: GERENCIAR
+            .addSubcommand(sub => sub
+                .setName('gerenciar')
+                .setDescription('Exibe a visão completa e interativa de uma turma')
+                .addStringOption(opt =>
+                    opt.setName('turma_id')
+                        .setDescription('ID direto da turma a consultar')
+                        .setRequired(false)
+                        .setAutocomplete(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('sigla_curso')
+                        .setDescription('Filtra turmas ativas por sigla do curso')
+                        .setRequired(false)
+                        .setAutocomplete(true)
+                )
+            ),
     ].map(cmd => cmd.toJSON());
 }
 
