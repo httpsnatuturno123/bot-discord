@@ -88,8 +88,8 @@ class TurmasHandle {
     async atualizarStatus(id, novoStatus) {
         const { rows } = await this.connection.query(
             `UPDATE ceob.turmas 
-             SET status = $1, 
-                 data_encerramento = CASE WHEN $1 = 'ENCERRADO' THEN NOW() ELSE data_encerramento END,
+             SET status = $1::ceob.status_curso_enum, 
+                 data_encerramento = CASE WHEN $1::text = 'ENCERRADO' THEN NOW() ELSE data_encerramento END,
                  updated_at = NOW() 
              WHERE id = $2 RETURNING *`,
             [novoStatus, id]
