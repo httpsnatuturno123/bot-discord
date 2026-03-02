@@ -305,8 +305,10 @@ async function handleCatalogoReativar(interaction, ceobDb) {
  */
 async function handleCatalogoAutocomplete(interaction, ceobDb) {
     try {
-        const focusedValue = interaction.options.getFocused().toUpperCase();
+        const focusedValue = (interaction.options.getFocused() || '').toString().toUpperCase();
         const subcommand = interaction.options.getSubcommand();
+
+        console.log(`[Autocomplete catalogo] sub=${subcommand} valor="${focusedValue}"`);
 
         // Busca todos os cursos, pois listar(true) traz só os ativos.
         // O método listar() retorna apenas ativos se true (padrão), 
@@ -319,11 +321,15 @@ async function handleCatalogoAutocomplete(interaction, ceobDb) {
         const cursosFiltradosPeloStatus = todosCursos.filter(c => c.ativo === querAtivos);
 
         const filtered = cursosFiltradosPeloStatus
-            .filter(c => c.sigla.includes(focusedValue) || c.nome.toUpperCase().includes(focusedValue))
+            .filter(c => {
+                const sigla = (c.sigla || '').toUpperCase();
+                const nome = (c.nome || '').toUpperCase();
+                return sigla.includes(focusedValue) || nome.includes(focusedValue);
+            })
             .slice(0, 25); // Limite do Discord
 
         await interaction.respond(
-            filtered.map(c => ({ name: `[${c.sigla}] ${c.nome}`, value: c.sigla }))
+            filtered.map(c => ({ name: `[${c.sigla}] ${c.nome}`.substring(0, 100), value: c.sigla }))
         );
 
     } catch (error) {

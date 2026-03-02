@@ -20,7 +20,8 @@ class MigrationHandle {
                 '005_seed.sql',
                 '006_ajustes_funcoes.sql',
                 '007_sistema_cursos.sql',
-                '008_reestruturacao_cursos.sql'
+                '008_reestruturacao_cursos.sql',
+                '009_ajustes_turmas_enum.sql'
             ];
 
             for (const file of migrationFiles) {

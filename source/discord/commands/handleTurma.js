@@ -456,56 +456,68 @@ async function resolverMilitar(ceobDb, discordUser, fallbackMilitar) {
 async function handleTurmaAutocomplete(interaction, ceobDb) {
     try {
         const focusedOption = interaction.options.getFocused(true);
-        const focusedValue = focusedOption.value.toUpperCase();
+        const focusedValue = (focusedOption.value || '').toString().toUpperCase();
+
+        console.log(`[Autocomplete turma] campo=${focusedOption.name} valor="${focusedValue}"`);
 
         if (focusedOption.name === 'sigla_curso') {
             // Autocomplete: cursos ativos do catálogo
             const cursosAtivos = await ceobDb.catalogoCursos.listar(true);
 
             const filtered = cursosAtivos
-                .filter(c => c.sigla.includes(focusedValue) || c.nome.toUpperCase().includes(focusedValue))
+                .filter(c => {
+                    const sigla = (c.sigla || '').toUpperCase();
+                    const nome = (c.nome || '').toUpperCase();
+                    return sigla.includes(focusedValue) || nome.includes(focusedValue);
+                })
                 .slice(0, 25);
 
             await interaction.respond(
-                filtered.map(c => ({ name: `[${c.sigla}] ${c.nome}`, value: c.sigla }))
+                filtered.map(c => ({ name: `[${c.sigla}] ${c.nome}`.substring(0, 100), value: c.sigla }))
             );
         } else if (focusedOption.name === 'om') {
             // Autocomplete: OMs ativas
             const todasOMs = await ceobDb.organizacoes.getAll();
 
             const filtered = todasOMs
-                .filter(om => om.sigla.toUpperCase().includes(focusedValue) || om.nome.toUpperCase().includes(focusedValue))
+                .filter(om => {
+                    const sigla = (om.sigla || '').toUpperCase();
+                    const nome = (om.nome || '').toUpperCase();
+                    return sigla.includes(focusedValue) || nome.includes(focusedValue);
+                })
                 .slice(0, 25);
 
             await interaction.respond(
-                filtered.map(om => ({ name: `[${om.sigla}] ${om.nome}`, value: om.sigla }))
+                filtered.map(om => ({ name: `[${om.sigla}] ${om.nome}`.substring(0, 100), value: om.sigla }))
             );
         } else if (focusedOption.name === 'turma_id') {
             // Autocomplete: turmas PLANEJADO ou EM_ANDAMENTO ativas
-            const todasTurmas = await ceobDb.turmas.listar(); // No futuro podemos criar um método específico para otimizar
+            const todasTurmas = await ceobDb.turmas.listar();
 
             const turmasValidas = todasTurmas.filter(t => t.status === 'PLANEJADO' || t.status === 'EM_ANDAMENTO');
 
             const filtered = turmasValidas
-                .filter(t =>
-                    t.id.toString().includes(focusedValue) ||
-                    t.sigla.toUpperCase().includes(focusedValue) ||
-                    t.identificador_turma.toUpperCase().includes(focusedValue)
-                )
+                .filter(t => {
+                    const idStr = (t.id || '').toString();
+                    const sigla = (t.sigla || '').toUpperCase();
+                    const identificador = (t.identificador_turma || '').toUpperCase();
+                    return idStr.includes(focusedValue) || sigla.includes(focusedValue) || identificador.includes(focusedValue);
+                })
                 .slice(0, 25);
 
             await interaction.respond(
                 filtered.map(t => ({
-                    name: `[ID:${t.id}] ${t.sigla} ${t.identificador_turma} (${t.status})`,
+                    name: `[ID:${t.id}] ${t.sigla || '?'} ${t.identificador_turma || '?'} (${t.status})`.substring(0, 100),
                     value: t.id.toString()
                 }))
             );
         } else {
+            console.log(`[Autocomplete turma] Campo não reconhecido: ${focusedOption.name}`);
             await interaction.respond([]);
         }
 
     } catch (error) {
-        console.error(`[handleTurmaAutocomplete] Erro:`, error);
+        console.error(`[handleTurmaAutocomplete] Erro no campo "${interaction.options.getFocused(true)?.name}":`, error);
         await interaction.respond([]).catch(() => { });
     }
 }
