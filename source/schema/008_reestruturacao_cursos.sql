@@ -77,10 +77,14 @@ DROP TABLE ceob.cursos;
 
 -- 5. Triggers
 -- a) trigger_updated_at
+DROP TRIGGER IF EXISTS trg_catalogo_cursos_updated ON ceob.catalogo_cursos;
+
 CREATE TRIGGER trg_catalogo_cursos_updated
     BEFORE UPDATE ON ceob.catalogo_cursos
     FOR EACH ROW
     EXECUTE FUNCTION ceob.trigger_updated_at();
+
+DROP TRIGGER IF EXISTS trg_turmas_updated ON ceob.turmas;
 
 CREATE TRIGGER trg_turmas_updated
     BEFORE UPDATE ON ceob.turmas
@@ -88,9 +92,13 @@ CREATE TRIGGER trg_turmas_updated
     EXECUTE FUNCTION ceob.trigger_updated_at();
 
 -- b) trigger_audit_log
+DROP TRIGGER IF EXISTS trg_audit_catalogo_cursos ON ceob.catalogo_cursos;
+
 CREATE TRIGGER trg_audit_catalogo_cursos
     AFTER INSERT OR UPDATE OR DELETE ON ceob.catalogo_cursos
     FOR EACH ROW EXECUTE FUNCTION ceob.trigger_audit_log();
+
+DROP TRIGGER IF EXISTS trg_audit_turmas ON ceob.turmas;
 
 CREATE TRIGGER trg_audit_turmas
     AFTER INSERT OR UPDATE OR DELETE ON ceob.turmas
