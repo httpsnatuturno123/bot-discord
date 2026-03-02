@@ -80,39 +80,34 @@ async function handleTurmaAbrir(interaction, ceobDb) {
         }
 
         // 6. Resolve os militares (coordenador, instrutor, auxiliar)
-        const coordenador = await resolverMilitar(ceobDb, coordenadorUser, executorMilitar);
-        const instrutor = await resolverMilitar(ceobDb, instrutorUser, executorMilitar);
-        const auxiliar = await resolverMilitar(ceobDb, auxiliarUser, executorMilitar);
+        const coordenador = await ceobDb.militares.getByDiscord(coordenadorUser.id);
+        const instrutor = instrutorUser ? await ceobDb.militares.getByDiscord(instrutorUser.id) : null;
+        const auxiliar = auxiliarUser ? await ceobDb.militares.getByDiscord(auxiliarUser.id) : null;
 
         if (!coordenador) {
             return interaction.editReply('❌ O **coordenador** mencionado não possui cadastro no sistema.');
         }
-        if (!instrutor) {
+        if (instrutorUser && !instrutor) {
             return interaction.editReply('❌ O **instrutor** mencionado não possui cadastro no sistema.');
         }
-        if (!auxiliar) {
+        if (auxiliarUser && !auxiliar) {
             return interaction.editReply('❌ O **auxiliar** mencionado não possui cadastro no sistema.');
         }
 
-        // 7. Resolve a OM (se informada)
-        let omId = null;
-        let omInfo = null;
-
-        if (omSigla) {
-            omInfo = await ceobDb.organizacoes.getBySigla(omSigla.trim().toUpperCase());
-            if (!omInfo) {
-                return interaction.editReply(`❌ Organização Militar com sigla \`${omSigla}\` não encontrada.`);
-            }
-            omId = omInfo.id;
+        // 7. Resolve a OM (obrigatória)
+        const omInfo = await ceobDb.organizacoes.getBySigla(omSigla.trim().toUpperCase());
+        if (!omInfo) {
+            return interaction.editReply(`❌ Organização Militar com sigla \`${omSigla}\` não encontrada.`);
         }
+        const omId = omInfo.id;
 
         // 8. Cria a turma no banco
         const novaTurma = await ceobDb.turmas.criar({
             cursoId: curso.id,
             identificadorTurma: nomeTurma,
             coordenadorId: coordenador.id,
-            instrutorId: instrutor.id,
-            auxiliarId: auxiliar.id,
+            instrutorId: instrutor ? instrutor.id : null,
+            auxiliarId: auxiliar ? auxiliar.id : null,
             omId
         });
 
@@ -127,9 +122,9 @@ async function handleTurmaAbrir(interaction, ceobDb) {
                 `🆔 **ID da Turma:** \`${novaTurma.id}\`\n` +
                 `━━━━━━━━━━━━━━━━━━━━━\n` +
                 `👨‍✈️ **Coordenador:** ${coordenador.patente_abrev} ${coordenador.nome_guerra}\n` +
-                `👨‍🏫 **Instrutor:** ${instrutor.patente_abrev} ${instrutor.nome_guerra}\n` +
-                `🤝 **Auxiliar:** ${auxiliar.patente_abrev} ${auxiliar.nome_guerra}\n` +
-                (omInfo ? `🏛️ **OM:** ${omInfo.sigla}\n` : '') +
+                `👨‍🏫 **Instrutor:** ${instrutor ? `${instrutor.patente_abrev} ${instrutor.nome_guerra}` : '_Não Definido_'}\n` +
+                `🤝 **Auxiliar:** ${auxiliar ? `${auxiliar.patente_abrev} ${auxiliar.nome_guerra}` : '_Não Definido_'}\n` +
+                `🏛️ **OM:** ${omInfo.sigla}\n` +
                 `━━━━━━━━━━━━━━━━━━━━━`
             )
             .setTimestamp();
@@ -414,8 +409,8 @@ function buildTurmaEmbed(turma, alunos) {
         `🆔 **ID:** \`${turma.id}\`\n` +
         `━━━━━━━━━━━━━━━━━━━━━\n` +
         `👨‍✈️ **Coordenador:** ${turma.coordenador_nome}\n` +
-        `👨‍🏫 **Instrutor:** ${turma.instrutor_nome}\n` +
-        `🤝 **Auxiliar:** ${turma.auxiliar_nome}\n` +
+        `👨‍🏫 **Instrutor:** ${turma.instrutor_nome || '_Não Definido_'}\n` +
+        `🤝 **Auxiliar:** ${turma.auxiliar_nome || '_Não Definido_'}\n` +
         (turma.om_sigla ? `🏠 **OM:** ${turma.om_sigla}\n` : '') +
         `📅 **Abertura:** ${dataAbertura}\n` +
         (dataEncerramento ? `📅 **Encerramento:** ${dataEncerramento}\n` : '') +

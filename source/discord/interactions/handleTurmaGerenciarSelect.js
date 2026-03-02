@@ -42,8 +42,8 @@ async function handleTurmaGerenciarSelect(interaction, ceobDb) {
             `🆔 **ID:** \`${turma.id}\`\n` +
             `━━━━━━━━━━━━━━━━━━━━━\n` +
             `👨‍✈️ **Coordenador:** ${turma.coordenador_nome}\n` +
-            `👨‍🏫 **Instrutor:** ${turma.instrutor_nome}\n` +
-            `🤝 **Auxiliar:** ${turma.auxiliar_nome}\n` +
+            `👨‍🏫 **Instrutor:** ${turma.instrutor_nome || '_Não Definido_'}\n` +
+            `🤝 **Auxiliar:** ${turma.auxiliar_nome || '_Não Definido_'}\n` +
             (turma.om_sigla ? `🏠 **OM:** ${turma.om_sigla}\n` : '') +
             `📅 **Abertura:** ${dataAbertura}\n` +
             (dataEncerramento ? `📅 **Encerramento:** ${dataEncerramento}\n` : '') +

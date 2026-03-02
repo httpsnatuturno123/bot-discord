@@ -30,8 +30,8 @@ class TurmasHandle {
             JOIN ceob.catalogo_cursos cc ON t.curso_id = cc.id
             LEFT JOIN ceob.organizacoes_militares om ON t.om_id = om.id
             JOIN ceob.militares coord ON t.coordenador_id = coord.id
-            JOIN ceob.militares inst ON t.instrutor_id = inst.id
-            JOIN ceob.militares aux ON t.auxiliar_id = aux.id
+            LEFT JOIN ceob.militares inst ON t.instrutor_id = inst.id
+            LEFT JOIN ceob.militares aux ON t.auxiliar_id = aux.id
             WHERE t.ativo = true
         `;
         const params = [];
@@ -60,8 +60,8 @@ class TurmasHandle {
              JOIN ceob.catalogo_cursos cc ON t.curso_id = cc.id
              LEFT JOIN ceob.organizacoes_militares om ON t.om_id = om.id
              JOIN ceob.militares coord ON t.coordenador_id = coord.id
-             JOIN ceob.militares inst ON t.instrutor_id = inst.id
-             JOIN ceob.militares aux ON t.auxiliar_id = aux.id
+             LEFT JOIN ceob.militares inst ON t.instrutor_id = inst.id
+             LEFT JOIN ceob.militares aux ON t.auxiliar_id = aux.id
              WHERE t.id = $1`,
             [id]
         );
@@ -134,8 +134,8 @@ class TurmasHandle {
              JOIN ceob.catalogo_cursos cc ON t.curso_id = cc.id
              LEFT JOIN ceob.organizacoes_militares om ON t.om_id = om.id
              JOIN ceob.militares coord ON t.coordenador_id = coord.id
-             JOIN ceob.militares inst ON t.instrutor_id = inst.id
-             JOIN ceob.militares aux ON t.auxiliar_id = aux.id
+             LEFT JOIN ceob.militares inst ON t.instrutor_id = inst.id
+             LEFT JOIN ceob.militares aux ON t.auxiliar_id = aux.id
              WHERE cc.sigla = $1 AND t.ativo = true
              ORDER BY t.created_at DESC`,
             [sigla]

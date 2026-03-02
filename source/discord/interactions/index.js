@@ -8,6 +8,7 @@ const { isTransferenciaModal, handleTransferenciaModal } = require('./modalTrans
 const { isCursoAplicarModal, handleCursoAplicarModal } = require('./handleCursoAplicarModal');
 const { isCursoButton, handleCursoButton } = require('./handleCursoButton');
 const { handleCatalogo, handleCatalogoListar, handleCatalogoAutocomplete } = require('../commands/handleCatalogo');
+const { isCatalogoListarButton, handleCatalogoListarButton } = require('./handleCatalogoListarButton');
 const { handleTurmaAutocomplete } = require('../commands/handleTurma');
 
 const { isTurmaIntegrarButton, handleTurmaIntegrarButton } = require('./handleTurmaIntegrarButton');
@@ -34,10 +35,6 @@ async function routeInteraction(interaction, ceobDb) {
 
     // ── Menus de Seleção ──
     if (interaction.isStringSelectMenu()) {
-        if (isCatalogoListarSelect(interaction.customId)) {
-            await handleCatalogoListarSelect(interaction, ceobDb);
-            return true;
-        }
         if (isTurmaGerenciarSelect(interaction.customId)) {
             await handleTurmaGerenciarSelect(interaction, ceobDb);
             return true;
@@ -50,7 +47,7 @@ async function routeInteraction(interaction, ceobDb) {
             await handleCursoButton(interaction, ceobDb);
             return true;
         }
-        if (isTransferenciaRequerimentoButton(interaction.customId)) {
+        if (isTransferenciaButton(interaction.customId)) {
             await handleTransferenciaButton(interaction, ceobDb);
             return true;
         }
