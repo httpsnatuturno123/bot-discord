@@ -56,9 +56,9 @@ async function handleTurmaAbrir(interaction, ceobDb) {
         // 3. Obtém os parâmetros
         const siglaCurso = interaction.options.getString('sigla_curso').trim().toUpperCase();
         const nomeTurma = interaction.options.getString('nome_turma').trim();
-        const coordenadorUser = interaction.options.getUser('coordenador');
-        const instrutorUser = interaction.options.getUser('instrutor');
-        const auxiliarUser = interaction.options.getUser('auxiliar');
+        const coordenadorInput = interaction.options.getString('coordenador');
+        const instrutorInput = interaction.options.getString('instrutor');
+        const auxiliarInput = interaction.options.getString('auxiliar');
         const omSigla = interaction.options.getString('om');
 
         // 4. Busca o curso no catálogo
@@ -80,18 +80,31 @@ async function handleTurmaAbrir(interaction, ceobDb) {
         }
 
         // 6. Resolve os militares (coordenador, instrutor, auxiliar)
-        const coordenador = await ceobDb.militares.getByDiscord(coordenadorUser.id);
-        const instrutor = instrutorUser ? await ceobDb.militares.getByDiscord(instrutorUser.id) : null;
-        const auxiliar = auxiliarUser ? await ceobDb.militares.getByDiscord(auxiliarUser.id) : null;
+        let coordenador = null;
+        let instrutor = null;
+        let auxiliar = null;
 
-        if (!coordenador) {
-            return interaction.editReply('❌ O **coordenador** mencionado não possui cadastro no sistema.');
-        }
-        if (instrutorUser && !instrutor) {
-            return interaction.editReply('❌ O **instrutor** mencionado não possui cadastro no sistema.');
-        }
-        if (auxiliarUser && !auxiliar) {
-            return interaction.editReply('❌ O **auxiliar** mencionado não possui cadastro no sistema.');
+        try {
+            coordenador = await resolverMilitar(ceobDb, coordenadorInput);
+            if (!coordenador) {
+                return interaction.editReply('❌ O **coordenador** informado não foi encontrado ou não possui cadastro ativo no sistema.');
+            }
+
+            if (instrutorInput) {
+                instrutor = await resolverMilitar(ceobDb, instrutorInput);
+                if (!instrutor) {
+                    return interaction.editReply('❌ O **instrutor** informado não foi encontrado ou não possui cadastro ativo no sistema.');
+                }
+            }
+
+            if (auxiliarInput) {
+                auxiliar = await resolverMilitar(ceobDb, auxiliarInput);
+                if (!auxiliar) {
+                    return interaction.editReply('❌ O **auxiliar** informado não foi encontrado ou não possui cadastro ativo no sistema.');
+                }
+            }
+        } catch (err) {
+            return interaction.editReply(`❌ **Erro ao buscar militar:** ${err.message}`);
         }
 
         // 7. Resolve a OM (obrigatória)
@@ -440,14 +453,30 @@ function buildTurmaEmbed(turma, alunos) {
 }
 
 /**
- * Resolve um militar: se um User do Discord foi mencionado, busca no banco;
- * caso contrário, usa o executor como fallback.
+ * Resolve um militar por Matrícula, menção Discord, ou serviço Roblox (ID/Username).
+ * @param {import('../../database/CeobDatabase')} ceobDb 
+ * @param {string} identificador 
+ * @returns {Promise<Object|null>}
  */
-async function resolverMilitar(ceobDb, discordUser, fallbackMilitar) {
-    if (!discordUser) {
-        return fallbackMilitar;
+async function resolverMilitar(ceobDb, identificador) {
+    if (!identificador) return null;
+    const input = identificador.trim();
+
+    // 1. Tentar como Matrícula (Formato YYYY-XXXX)
+    if (/^\d{4}-\d{4}$/.test(input)) {
+        return await ceobDb.militares.getByMatricula(input);
     }
-    return ceobDb.militares.getByDiscord(discordUser.id);
+    // 2. Tentar como Menção do Discord (<@123...>)
+    else if (/<@!?(\d+)>/.test(input) || /^\d{17,19}$/.test(input)) {
+        const discordIdMatch = input.match(/<@!?(\d+)>/) || input.match(/^(\d{17,19})$/);
+        if (discordIdMatch) {
+            return await ceobDb.militares.getByDiscord(discordIdMatch[1]);
+        }
+    }
+    // 3. Tentar como Roblox ID ou Username usando robloxService
+    const robloxService = require('../services/robloxService');
+    const { userId } = await robloxService.resolverUsuario(input);
+    return await ceobDb.militares.getByRoblox(userId);
 }
 
 /**

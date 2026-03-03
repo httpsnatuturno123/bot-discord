@@ -485,9 +485,9 @@ function getSlashCommands() {
                         .setDescription('Identificador/nome da turma (ex: Alfa, Bravo, Turma 1)')
                         .setRequired(true)
                 )
-                .addUserOption(opt =>
+                .addStringOption(opt =>
                     opt.setName('coordenador')
-                        .setDescription('Discord do coordenador da turma')
+                        .setDescription('Matrícula, Roblox Nome ou ID do coordenador')
                         .setRequired(true)
                 )
                 .addStringOption(opt =>
@@ -496,14 +496,14 @@ function getSlashCommands() {
                         .setRequired(true)
                         .setAutocomplete(true)
                 )
-                .addUserOption(opt =>
+                .addStringOption(opt =>
                     opt.setName('instrutor')
-                        .setDescription('Discord do instrutor (padrão: Não Definido)')
+                        .setDescription('Matrícula, Roblox Nome ou ID do instrutor (opcional)')
                         .setRequired(false)
                 )
-                .addUserOption(opt =>
+                .addStringOption(opt =>
                     opt.setName('auxiliar')
-                        .setDescription('Discord do auxiliar (padrão: Não Definido)')
+                        .setDescription('Matrícula, Roblox Nome ou ID do auxiliar (opcional)')
                         .setRequired(false)
                 )
             )
