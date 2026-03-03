@@ -10,14 +10,9 @@ function getSlashCommands() {
             .setName('ficha')
             .setDescription('Consulta a ficha de um militar')
             .addStringOption(opt =>
-                opt.setName('matricula')
-                    .setDescription('Matrícula do militar (ex: 2026-0001)')
-                    .setRequired(false)
-            )
-            .addUserOption(opt =>
-                opt.setName('usuario')
-                    .setDescription('Usuário do Discord do militar')
-                    .setRequired(false)
+                opt.setName('identificador')
+                    .setDescription('Matrícula, ID numérico do Roblox ou @Usuário do Discord')
+                    .setRequired(true)
             ),
 
         new SlashCommandBuilder()
