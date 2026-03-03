@@ -92,22 +92,26 @@ async function handleTurmaEncerrarButton(interaction, ceobDb) {
                         .setStyle(ButtonStyle.Danger)
                 );
 
-                // Enviar para o canal do DGP
-                const canalDGPId = process.env.CANAL_DGP_ID;
-                const canalDGP = interaction.client.channels.cache.get(canalDGPId) || await interaction.client.channels.fetch(canalDGPId);
+                // Enviar para o canal de Requerimentos
+                const canalRequerimentosId = process.env.CANAL_REQUERIMENTOS_ID;
+                if (!canalRequerimentosId) {
+                    console.error('[handleTurmaEncerrarButton] CANAL_REQUERIMENTOS_ID não definido no .env');
+                    return interaction.followUp({ content: '❌ Erro interno: Canal de Requerimentos não configurado.', ephemeral: true });
+                }
+                const canalRequerimentos = interaction.client.channels.cache.get(canalRequerimentosId) || await interaction.client.channels.fetch(canalRequerimentosId);
 
-                if (canalDGP) {
-                    await canalDGP.send({ embeds: [embedRequerimento], components: [rowButtons] });
+                if (canalRequerimentos) {
+                    await canalRequerimentos.send({ embeds: [embedRequerimento], components: [rowButtons] });
                 } else {
-                    console.error('[handleTurmaEncerrarButton] Canal DGP não encontrado.');
-                    return interaction.followUp({ content: '❌ Erro interno: Canal do DGP não configurado corretamente.', ephemeral: true });
+                    console.error('[handleTurmaEncerrarButton] Canal de Requerimentos não encontrado.');
+                    return interaction.followUp({ content: '❌ Erro interno: Canal de Requerimentos não encontrado.', ephemeral: true });
                 }
 
-                // Atualizar o embed original informando que foi pro DGP
+                // Atualizar o embed original informando que foi para Requerimentos
                 const embedOriginal = EmbedBuilder.from(interaction.message.embeds[0])
-                    .setTitle(`⏳ Aguardando DGP: ${turma.sigla} "${turma.identificador_turma}"`)
+                    .setTitle(`⏳ Aguardando Aprovação: ${turma.sigla} "${turma.identificador_turma}"`)
                     .setColor(0xF1C40F) // Amarelo
-                    .setDescription(`Requerimento de encerramento enviado ao **DGP** com sucesso. A turma será encerrada após aprovação.`);
+                    .setDescription(`Requerimento de encerramento enviado ao canal de **Requerimentos** com sucesso. A turma será encerrada após aprovação.`);
 
                 await interaction.editReply({ embeds: [embedOriginal], components: [] });
             }
