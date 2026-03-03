@@ -28,7 +28,7 @@ const handleDesligar = require('./commands/handleDesligar');
 const handleFuncao = require('./commands/handleFuncao');
 const handleTransferir = require('./commands/handleTransferir');
 const handleTransferenciaRequerimento = require('./commands/handleTransferenciaRequerimento');
-const handleCursoAplicar = require('./commands/handleCursoAplicar');
+const { handleCursoAplicar } = require('./commands/handleCursoAplicar');
 const { handleCatalogo } = require('./commands/handleCatalogo');
 const { handleTurma } = require('./commands/handleTurma');
 

@@ -402,7 +402,23 @@ function getSlashCommands() {
             .setDescription('Gerencia o sistema de cursos')
             .addSubcommand(sub => sub
                 .setName('aplicar')
-                .setDescription('Abre o formulário para aplicar um curso (CFS/CFSd/CFC/etc)')
+                .setDescription('Aplica um curso de formação (CFC ou CFSd)')
+                .addStringOption(opt =>
+                    opt.setName('curso')
+                        .setDescription('Curso a ser aplicado (CFC ou CFSd)')
+                        .setRequired(true)
+                        .setAutocomplete(true)
+                )
+                .addUserOption(opt =>
+                    opt.setName('coordenador')
+                        .setDescription('Oficial coordenador do curso')
+                        .setRequired(true)
+                )
+                .addUserOption(opt =>
+                    opt.setName('auxiliar')
+                        .setDescription('Auxiliar do instrutor (opcional)')
+                        .setRequired(false)
+                )
             ),
 
         new SlashCommandBuilder()

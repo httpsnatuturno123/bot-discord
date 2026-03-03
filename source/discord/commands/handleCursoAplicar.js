@@ -10,8 +10,17 @@ async function handleCursoAplicar(interaction, ceobDb) {
         const subcommand = interaction.options.getSubcommand();
         if (subcommand !== 'aplicar') return;
 
-        // 1. Validação do Instrutor: Deve ser ATIVO e possuir o curso CFS
-        // Buscamos o militar executor pelo seu Discord ID
+        // 1. Extrair parâmetros do slash command
+        const cursoSigla = interaction.options.getString('curso').trim().toUpperCase();
+        const coordenadorUser = interaction.options.getUser('coordenador');
+        const auxiliarUser = interaction.options.getUser('auxiliar');
+
+        // 2. Validação do curso (apenas CFC e CFSd)
+        if (cursoSigla !== 'CFC' && cursoSigla !== 'CFSD') {
+            return interaction.reply({ content: '❌ Este comando aceita apenas os cursos **CFC** e **CFSd**.', ephemeral: true });
+        }
+
+        // 3. Validação do Instrutor (executor): Deve ser ATIVO
         const instrutor = await ceobDb.militares.getByDiscord(interaction.user.id);
 
         if (!instrutor) {
@@ -22,10 +31,9 @@ async function handleCursoAplicar(interaction, ceobDb) {
             return interaction.reply({ content: '❌ Apenas militares em situação ATIVA podem aplicar cursos.', ephemeral: true });
         }
 
-        // 2. Validação de Exceção: Comando Supremo ignora a trava de curso
+        // 4. Validação de permissão: Oficial, CFS concluído ou Comando Supremo
         const isSupremo = await ceobDb.permissoes.isComandoSupremo(instrutor.id);
 
-        // Verifica se possui o curso CFS (pela sigla na tabela estruturada ou pela descrição na timeline como fallback)
         const cursosMilitar = await ceobDb.militarCursos.getDoMilitar(instrutor.id);
         const temCfsEstruturado = cursosMilitar.some(c => c.curso_sigla === 'CFS' && c.status_aluno === 'APROVADO');
 
@@ -40,10 +48,34 @@ async function handleCursoAplicar(interaction, ceobDb) {
             return interaction.reply({ content: '❌ Apenas **Oficiais** ou militares com o curso **CFS** concluído podem aplicar cursos.', ephemeral: true });
         }
 
-        // 2. Criação do Modal
+        // 5. Validação do Coordenador: deve ser oficial
+        const coordenador = await ceobDb.militares.getByDiscord(coordenadorUser.id);
+
+        if (!coordenador) {
+            return interaction.reply({ content: '❌ O **coordenador** mencionado não possui cadastro no sistema.', ephemeral: true });
+        }
+
+        if (!coordenador.is_oficial) {
+            return interaction.reply({ content: '❌ O **coordenador** deve ser um **Oficial**. O militar informado não pertence ao oficialato.', ephemeral: true });
+        }
+
+        // 6. Validação do Auxiliar (se informado)
+        let auxiliarDiscordId = 'null';
+        if (auxiliarUser) {
+            const auxiliar = await ceobDb.militares.getByDiscord(auxiliarUser.id);
+            if (!auxiliar) {
+                return interaction.reply({ content: '❌ O **auxiliar** mencionado não possui cadastro no sistema.', ephemeral: true });
+            }
+            auxiliarDiscordId = auxiliarUser.id;
+        }
+
+        // 7. Criação do Modal (apenas campos de alunos)
+        // Codificamos os dados nos customId para recuperar no modal submit
+        const modalCustomId = `modal_curso_aplicar_${cursoSigla}_${coordenadorUser.id}_${auxiliarDiscordId}`;
+
         const modal = new ModalBuilder()
-            .setCustomId('modal_curso_aplicar')
-            .setTitle('Aplicação de Curso');
+            .setCustomId(modalCustomId)
+            .setTitle(`Aplicação de ${cursoSigla}`);
 
         // Campo 1: Alunos Participantes
         const alunosParticipantesInput = new TextInputBuilder()
@@ -53,23 +85,7 @@ async function handleCursoAplicar(interaction, ceobDb) {
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true);
 
-        // Campo 2: Instrutor Responsável (pré-preenchido com o executor por padrão na descrição do campo ou deixado livre)
-        const instrutorInput = new TextInputBuilder()
-            .setCustomId('instrutor_nome')
-            .setLabel('Instrutor Responsável')
-            .setValue(`${instrutor.nome_guerra}`)
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-        // Campo 3: Curso Aplicado
-        const cursoInput = new TextInputBuilder()
-            .setCustomId('curso_nome')
-            .setLabel('Curso Aplicado (ex: CFC, CFSd)')
-            .setPlaceholder('CFC ou CFSd')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true);
-
-        // Campo 4: Alunos Aprovados
+        // Campo 2: Alunos Aprovados
         const alunosAprovadosInput = new TextInputBuilder()
             .setCustomId('alunos_aprovados')
             .setLabel('Alunos Aprovados')
@@ -77,11 +93,8 @@ async function handleCursoAplicar(interaction, ceobDb) {
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true);
 
-        // Adiciona as linhas
         modal.addComponents(
             new ActionRowBuilder().addComponents(alunosParticipantesInput),
-            new ActionRowBuilder().addComponents(instrutorInput),
-            new ActionRowBuilder().addComponents(cursoInput),
             new ActionRowBuilder().addComponents(alunosAprovadosInput)
         );
 
@@ -89,8 +102,40 @@ async function handleCursoAplicar(interaction, ceobDb) {
 
     } catch (error) {
         console.error('Erro no comando curso aplicar:', error);
-        await interaction.reply({ content: '❌ Erro ao abrir formulário de aplicação.', ephemeral: true });
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({ content: '❌ Erro ao abrir formulário de aplicação.', ephemeral: true });
+        }
     }
 }
 
-module.exports = handleCursoAplicar;
+/**
+ * Handler de Autocomplete para o comando /curso
+ * Retorna apenas CFC e CFSd como opções.
+ */
+async function handleCursoAutocomplete(interaction, ceobDb) {
+    try {
+        const focusedOption = interaction.options.getFocused(true);
+
+        if (focusedOption.name === 'curso') {
+            const cursos = [
+                { name: '[CFC] Curso de Formação de Cabos', value: 'CFC' },
+                { name: '[CFSd] Curso de Formação de Soldados', value: 'CFSd' }
+            ];
+
+            const focusedValue = (focusedOption.value || '').toUpperCase();
+            const filtered = cursos.filter(c =>
+                c.name.toUpperCase().includes(focusedValue) ||
+                c.value.toUpperCase().includes(focusedValue)
+            );
+
+            await interaction.respond(filtered);
+        } else {
+            await interaction.respond([]);
+        }
+    } catch (error) {
+        console.error('[handleCursoAutocomplete] Erro:', error);
+        await interaction.respond([]).catch(() => { });
+    }
+}
+
+module.exports = { handleCursoAplicar, handleCursoAutocomplete };
