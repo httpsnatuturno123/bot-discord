@@ -35,7 +35,7 @@ async function bootstrap() {
 
     // 3. API Express
     const port = process.env.PORT || 3000;
-    const api = new ApiServer(port, process.env.API_KEY, legacyDb);
+    const api = new ApiServer(port, process.env.API_KEY, legacyDb, ceobDb);
     api.start();
 
     // 4. Bot do Discord (recebe ambos os bancos)

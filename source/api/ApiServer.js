@@ -1,10 +1,11 @@
 const express = require('express');
 
 class ApiServer {
-    constructor(port, apiKey, db) {
+    constructor(port, apiKey, db, ceobDb) {
         this.port = port;
         this.apiKey = apiKey;
         this.db = db;
+        this.ceobDb = ceobDb;
         this.app = express();
 
         this.app.use(express.json());
@@ -14,6 +15,40 @@ class ApiServer {
     setupRoutes() {
         this.app.get('/', (req, res) => {
             res.status(200).send("API online.");
+        });
+
+        this.app.get('/ficha/:robloxUserId', async (req, res) => {
+            try {
+                if (req.headers["x-api-key"] !== this.apiKey) {
+                    console.log("❌ API: Tentativa de acesso negada na rota /ficha (chave inválida).");
+                    return res.status(403).json({ error: "Acesso negado" });
+                }
+
+                if (!this.ceobDb) {
+                    return res.status(503).json({ error: "Banco CEOB não configurado" });
+                }
+
+                const { robloxUserId } = req.params;
+
+                if (!/^\d+$/.test(robloxUserId)) {
+                    return res.status(400).json({ error: "robloxUserId deve ser numérico" });
+                }
+
+                const militar = await this.ceobDb.militares.getByRoblox(robloxUserId);
+
+                if (!militar) {
+                    return res.status(404).json({ error: "Militar não encontrado" });
+                }
+
+                const ficha = await this.ceobDb.ficha.getCompleta(militar.id);
+
+                console.log(`📤 API: Ficha enviada para Roblox -> ${militar.patente_abrev || ''} ${militar.nome_guerra || ''}`.trim());
+                res.json(ficha);
+
+            } catch (err) {
+                console.error("❌ Erro na rota /ficha:", err);
+                res.status(500).json({ error: "Erro interno do servidor" });
+            }
         });
 
         this.app.get('/pending-bans', async (req, res) => {
