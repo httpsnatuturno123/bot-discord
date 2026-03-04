@@ -68,6 +68,10 @@ async function routeInteraction(interaction, ceobDb) {
             await handleTurmaEncerrarButton(interaction, ceobDb);
             return true;
         }
+        if (isRequerimentoButton(interaction.customId)) {
+            await handleRequerimentoButton(interaction);
+            return true;
+        }
         return false;
     }
 
@@ -83,6 +87,14 @@ async function routeInteraction(interaction, ceobDb) {
         }
         if (isTurmaIntegrarModal(interaction.customId)) {
             await handleTurmaIntegrarModal(interaction, ceobDb);
+            return true;
+        }
+        if (isRequerimentoModal(interaction.customId)) {
+            await handleRequerimentoModal(interaction, ceobDb);
+            return true;
+        }
+        if (isRebaixarModal(interaction.customId)) {
+            await handleRebaixarModal(interaction, ceobDb);
             return true;
         }
         return false;
