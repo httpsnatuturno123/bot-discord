@@ -77,9 +77,11 @@ async function handleTurmaIntegrarModal(interaction, ceobDb) {
                     continue;
                 }
 
-                // Verifica se já possui o curso *Aprovado* (Bloqueio)
+                // Verifica se já possui o curso *Aprovado* nesta mesma turma (Bloqueio)
+                // NOTA: mc.curso_id retornado por getDoMilitar é o turmas.id (não catalogo_cursos.id),
+                // pois a FK militar_cursos.curso_id → turmas.id após migração 008.
                 const militarCursos = await ceobDb.militarCursos.getDoMilitar(militar.id);
-                const jaPossuiCurso = militarCursos.some(mc => mc.curso_id === turma.curso_id && mc.status_aluno === 'APROVADO');
+                const jaPossuiCurso = militarCursos.some(mc => mc.curso_id === turma.id && mc.status_aluno === 'APROVADO');
 
                 if (jaPossuiCurso) {
                     resultados.erros.push(`O militar \`${militar.nome_guerra}\` (${username}) já possui este curso concluído/aprovado.`);
@@ -137,13 +139,15 @@ async function handleTurmaIntegrarModal(interaction, ceobDb) {
         }
 
         // 5. Inserir no Banco de Dados
+        // NOTA: militar_cursos.curso_id referencia turmas.id (após migração 008),
+        // portanto deve-se passar turma.id, e NÃO turma.curso_id (que é o ID do catálogo).
         for (const militarInfo of resultados.validos) {
             // 5a. Garante que está matriculado
-            await ceobDb.militarCursos.matricular(militarInfo.id, turma.curso_id);
+            await ceobDb.militarCursos.matricular(militarInfo.id, turma.id);
 
             // 5b. Se for finalizar, define status e nota
             if (acao === 'finalizar' && militarInfo.status !== 'CURSANDO') {
-                await ceobDb.militarCursos.finalizarCurso(militarInfo.id, turma.curso_id, militarInfo.status, militarInfo.nota);
+                await ceobDb.militarCursos.finalizarCurso(militarInfo.id, turma.id, militarInfo.status, militarInfo.nota);
             }
         }
 
