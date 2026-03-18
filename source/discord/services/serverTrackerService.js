@@ -237,6 +237,74 @@ class ServerTrackerService {
         }
         return `${seconds}s`;
     }
+
+    // ─────────────────────────────────────────────────
+    // Evento: Logs do Sentinel (SIDA)
+    // ─────────────────────────────────────────────────
+    async handleSentinelLogs({ meta, events }) {
+        const channel = await this.getLogChannel();
+        if (!channel) {
+            console.warn('⚠️ ServerTracker: Canal de logs não configurado, ignorando logs do Sentinel.');
+            return;
+        }
+
+        const embeds = [];
+
+        for (const event of events) {
+            const category = (event.category || 'unknown').toLowerCase();
+            const username = event.username || 'Desconhecido';
+            const userId = event.userId || 'N/A';
+            const details = event.details || 'Sem detalhes';
+            const timestamp = event.timestamp || new Date().toISOString();
+
+            // Define cor e ícone baseado na categoria
+            let color, icon, title;
+            if (category === 'join' || category === 'entrada' || category === 'player_join') {
+                color = 0x2ecc71; // Verde
+                icon = '➡️';
+                title = 'Entrada no Servidor';
+            } else if (category === 'leave' || category === 'saida' || category === 'player_leave') {
+                color = 0xe74c3c; // Vermelho
+                icon = '⬅️';
+                title = 'Saída do Servidor';
+            } else if (category === 'chat') {
+                color = 0x3498db; // Azul
+                icon = '💬';
+                title = 'Chat';
+            } else if (category === 'kill' || category === 'death') {
+                color = 0xe67e22; // Laranja
+                icon = '💀';
+                title = 'Morte/Kill';
+            } else {
+                color = 0xf1c40f; // Amarelo
+                icon = '📋';
+                title = category.charAt(0).toUpperCase() + category.slice(1);
+            }
+
+            const embed = new EmbedBuilder()
+                .setColor(color)
+                .setTitle(`${icon} ${title}`)
+                .addFields(
+                    { name: '👤 Player', value: username, inline: true },
+                    { name: '🆔 User ID', value: `\`${userId}\``, inline: true },
+                    { name: '📝 Detalhes', value: details, inline: false },
+                )
+                .setFooter({ text: `SIDA • Servidor: ${meta?.serverId || 'N/A'}` })
+                .setTimestamp(new Date(timestamp));
+
+            embeds.push(embed);
+        }
+
+        // Discord permite no máximo 10 embeds por mensagem
+        for (let i = 0; i < embeds.length; i += 10) {
+            const batch = embeds.slice(i, i + 10);
+            try {
+                await channel.send({ embeds: batch });
+            } catch (err) {
+                console.error('❌ ServerTracker: Erro ao enviar logs Sentinel no Discord:', err);
+            }
+        }
+    }
 }
 
 // Singleton — uma única instância compartilhada entre API e Discord

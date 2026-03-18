@@ -226,6 +226,34 @@ class ApiServer {
                 res.status(500).json({ error: "Erro interno do servidor" });
             }
         });
+
+        // ═══════════════════════════════════════════════════════
+        // ENDPOINT SENTINEL — Logs do SIDA (formato { meta, events })
+        // ═══════════════════════════════════════════════════════
+        this.app.post('/api/logs', async (req, res) => {
+            try {
+                if (req.headers["x-api-key"] !== this.apiKey) {
+                    return res.status(403).json({ error: "Acesso negado" });
+                }
+
+                const { meta, events } = req.body;
+
+                if (!events || !Array.isArray(events)) {
+                    return res.status(400).json({ error: "Faltam eventos" });
+                }
+
+                console.log(`📡 Sentinel: ${events.length} eventos recebidos | Servidor: ${meta?.serverId || 'N/A'}`);
+
+                // Envia os logs para o canal do Discord (SIDA)
+                await serverTracker.handleSentinelLogs({ meta, events });
+
+                res.status(201).json({ ok: true, received: events.length });
+
+            } catch (err) {
+                console.error("❌ Erro no POST /api/logs:", err);
+                res.status(500).json({ error: "Erro interno" });
+            }
+        });
     }
 
     start() {

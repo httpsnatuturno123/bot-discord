@@ -23,7 +23,7 @@ local Players = game:GetService("Players")
 -- CONFIGURAÇÃO - ALTERE ESTES VALORES
 -- ══════════════════════════════════════════
 local API_URL = "https://bot-discord-production-38a7.up.railway.app"  -- URL da API
-local API_KEY = "BQmJKff9iGPc9NxAmhqmfk3rAfgs15TS"                    -- Mesma chave do .env
+local API_KEY = "Arrombado123"                                      -- Mesma chave do .env
 local SERVER_NAME = "darckzinho123"                     -- Nome do servidor (opcional)
 -- ══════════════════════════════════════════
 
