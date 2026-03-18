@@ -280,6 +280,19 @@ function getSlashCommands() {
                     .setDescription('Motivo do desligamento')
                     .setRequired(true)
             ),
+
+        new SlashCommandBuilder()
+            .setName('configurar_logs_servidor')
+            .setDescription('Configura o canal para receber logs de servidores Roblox (Admin)')
+            .addChannelOption(opt =>
+                opt.setName('canal')
+                    .setDescription('Canal de texto para receber os logs')
+                    .setRequired(true)
+            ),
+
+        new SlashCommandBuilder()
+            .setName('servidores')
+            .setDescription('Mostra o status de todos os servidores Roblox ativos'),
     ].map(cmd => cmd.toJSON());
 }
 

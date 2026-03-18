@@ -25,6 +25,11 @@ const handleDeletarOM = require('./commands/handleDeletarOM');
 const handlePromover = require('./commands/handlePromover');
 const handleRebaixar = require('./commands/handleRebaixar');
 const handleDesligar = require('./commands/handleDesligar');
+const handleConfigurarLogsServidor = require('./commands/handleConfigurarLogsServidor');
+const handleServidores = require('./commands/handleServidores');
+
+// Serviço de rastreamento de servidores
+const serverTracker = require('./services/serverTrackerService');
 
 // Handler legado (prefixo)
 const handleBanLegado = require('./commands/handleBanLegado');
@@ -69,6 +74,8 @@ class DiscordBot {
             'promover': (i) => handlePromover(i, db),
             'rebaixar': (i) => handleRebaixar(i, db),
             'desligar': (i) => handleDesligar(i, db),
+            'configurar_logs_servidor': (i) => handleConfigurarLogsServidor(i),
+            'servidores': (i) => handleServidores(i),
         };
     }
 
@@ -79,6 +86,10 @@ class DiscordBot {
         this.client.once('ready', async () => {
             console.log(`✅ Discord: Bot logado como ${this.client.user.tag}`);
             await registerSlashCommands(this.client, this.token, getSlashCommands());
+
+            // Inicializar o rastreador de servidores com o client do Discord
+            serverTracker.setClient(this.client);
+            console.log('📡 ServerTracker: Sistema de monitoramento de servidores ativado.');
         });
 
         this.client.on('interactionCreate', (interaction) => this.handleInteraction(interaction));
