@@ -28,11 +28,11 @@ const PATENTE_ROBLOX_RANK_MAP = {
     15: 5, // 2º Sargento
     16: 4, // Aluno da EsPCEx
     17: 4, // 3º Sargento
-    18: 2, // Aluno da ESA
-    19: 2, // Cabo Aluno (CFST)
-    20: 2, // Cabo
-    21: 1, // SD/REC Aluno (CFC)
-    22: 1, // Soldado
+    18: 3, // Aluno da ESA
+    19: 3, // Cabo Aluno (CFST)
+    20: 3, // Cabo
+    21: 2, // SD/REC Aluno (CFC)
+    22: 2, // Soldado
     23: 1,   // Soldado-Recruta (Tive que chutar um valor para o Recruta, depois confirmar)
 };
 
@@ -171,7 +171,7 @@ async function buscarRolePorRank(groupId, rankNumber) {
  * Exemplo: 268223118 → "MjY4MjIzMTE4"
  */
 function userIdParaMembershipId(userId) {
-    return Buffer.from(String(userId)).toString('base64');
+    return Buffer.from(String(userId)).toString('base64').replace(/=+$/, '');
 }
 
 /**

@@ -16,26 +16,26 @@ const TIPO_MAP = {
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handleDesligar(interaction, ceobDb) {
-    await interaction.deferReply();
-
-    const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
-
-    if (!executorMilitar) {
-        return interaction.editReply('❌ Você não possui cadastro no sistema ou está inativo.');
-    }
-
-    // 1. Capturar parâmetros
-    const alvoInput = interaction.options.getString('alvo_identificador').trim();
-    const tipo = interaction.options.getString('tipo');
-    const motivo = interaction.options.getString('motivo');
-    const tipoInfo = TIPO_MAP[tipo];
-
-    if (!tipoInfo) {
-        return interaction.editReply('❌ Tipo de desligamento inválido.');
-    }
-
     try {
+        await interaction.deferReply();
+
+        const executorDiscordId = interaction.user.id;
+        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+
+        if (!executorMilitar) {
+            return interaction.editReply('❌ Você não possui cadastro no sistema ou está inativo.');
+        }
+
+        // 1. Capturar parâmetros
+        const alvoInput = interaction.options.getString('alvo_identificador').trim();
+        const tipo = interaction.options.getString('tipo');
+        const motivo = interaction.options.getString('motivo');
+        const tipoInfo = TIPO_MAP[tipo];
+
+        if (!tipoInfo) {
+            return interaction.editReply('❌ Tipo de desligamento inválido.');
+        }
+
         // 2. Resolver alvo
         let alvoMilitar = null;
         const discordIdMatch = alvoInput.match(/<@!?(\d+)>/) || alvoInput.match(/^(\d{17,19})$/);
@@ -56,9 +56,7 @@ async function handleDesligar(interaction, ceobDb) {
 
         if (isAutoDesligamento) {
             // Demissão a Pedido (executor === alvo): permitido para QUALQUER patente
-            // Nenhuma verificação hierárquica necessária
         } else {
-            // Todos os outros tipos: requer Oficial
             if (executorMilitar.ordem_precedencia > 11) {
                 return interaction.editReply('❌ Apenas Oficiais podem utilizar este comando para desligar outros militares.');
             }
@@ -67,12 +65,10 @@ async function handleDesligar(interaction, ceobDb) {
                 return interaction.editReply('❌ Você só pode desligar a si mesmo através da **Demissão a Pedido**.');
             }
 
-            // Executor deve ter hierarquia superior ao alvo
             if (alvoMilitar.ordem_precedencia <= executorMilitar.ordem_precedencia) {
                 return interaction.editReply(`❌ Você não pode desligar um militar de patente igual ou superior à sua (${alvoMilitar.patente_nome}).`);
             }
 
-            // Desligar Oficial requer Alto Comando
             const isAltoComando = await ceobDb.permissoes.isAltoComando(executorMilitar.id);
             if (alvoMilitar.ordem_precedencia <= 11 && !isAltoComando) {
                 return interaction.editReply('❌ Apenas membros do Alto Comando podem desligar Oficiais.');
@@ -119,9 +115,9 @@ async function handleDesligar(interaction, ceobDb) {
         });
 
         // 8. Boletim Eletrônico
-        const corEmbed = tipo === 'EXCLUSAO' ? 0xE53935  // Vermelho
-            : tipo === 'REFORMA' ? 0x9E9E9E  // Cinza
-                : 0xFF9800;  // Laranja
+        const corEmbed = tipo === 'EXCLUSAO' ? 0xE53935
+            : tipo === 'REFORMA' ? 0x9E9E9E
+                : 0xFF9800;
 
         const embed = {
             title: `📋 Boletim de ${tipoInfo.label} — ${alvoMilitar.nome_guerra}`,
@@ -176,10 +172,16 @@ async function handleDesligar(interaction, ceobDb) {
 
     } catch (error) {
         console.error('Erro no comando desligar:', error);
-        if (error.name === 'RobloxError') {
-            return interaction.editReply(`❌ **Erro no Roblox:** ${error.message}`);
+        const msg = error.name === 'RobloxError' ? `❌ **Erro no Roblox:** ${error.message}` : '❌ Ocorreu um erro interno ao processar o desligamento.';
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply(msg);
+            } else {
+                await interaction.reply({ content: msg, ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('Falha ao enviar resposta de erro:', replyErr);
         }
-        return interaction.editReply('❌ Ocorreu um erro interno ao processar o desligamento.');
     }
 }
 

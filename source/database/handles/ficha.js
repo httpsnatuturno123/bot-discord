@@ -20,10 +20,34 @@ class FichaHandle {
         const funcoes = await this.funcoesHandle.getDoMilitar(militarId);
         const timeline = await this.timelineHandle.getDoMilitar(militarId);
 
+        // Busca os cursos estruturados
+        const { rows: cursos } = await this.connection.query(
+            `SELECT mc.*, c.nome AS curso_nome, c.sigla AS curso_sigla, t.identificador_turma AS turma
+             FROM ceob.militar_cursos mc
+             JOIN ceob.turmas t ON mc.curso_id = t.id
+             JOIN ceob.catalogo_cursos c ON t.curso_id = c.id
+             WHERE mc.militar_id = $1
+             ORDER BY mc.data_conclusao DESC NULLS FIRST`,
+            [militarId]
+        );
+
+        // Busca o histórico de ações executadas por este militar
+        const { rows: historicoAcoes } = await this.connection.query(
+            `SELECT t.*, alvo.nome_guerra AS alvo_nome
+             FROM ceob.timeline_eventos t
+             LEFT JOIN ceob.militares alvo ON t.militar_id = alvo.id
+             WHERE t.executado_por_id = $1
+             ORDER BY t.created_at DESC
+             LIMIT 50`,
+            [militarId]
+        );
+
         return {
             militar: rows[0] || null,
             funcoes,
-            timeline
+            timeline,
+            cursos,
+            historicoAcoes
         };
     }
 }

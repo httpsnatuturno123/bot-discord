@@ -20,92 +20,88 @@ function isRequerimentoModal(customId) {
  * Processa a decisão de um requerimento (aprovação ou indeferimento).
  */
 async function handleRequerimentoModal(interaction, ceobDb) {
-    const isAprovacao = interaction.customId.startsWith(PREFIXOS.APROVAR);
-    const prefixo = isAprovacao ? PREFIXOS.APROVAR : PREFIXOS.INDEFERIR;
-    const requerimentoId = interaction.customId.replace(prefixo, '');
-    const statusFinal = isAprovacao ? 'APROVADO' : 'INDEFERIDO';
+    try {
+        const isAprovacao = interaction.customId.startsWith(PREFIXOS.APROVAR);
+        const prefixo = isAprovacao ? PREFIXOS.APROVAR : PREFIXOS.INDEFERIR;
+        const requerimentoId = interaction.customId.replace(prefixo, '');
+        const statusFinal = isAprovacao ? 'APROVADO' : 'INDEFERIDO';
 
-    await interaction.deferReply({ ephemeral: true });
+        let requerimento = null;
+        let dadosAlvo = null;
 
-    const motivoDecisao = interaction.fields.getTextInputValue('motivo_decisao');
+        await interaction.deferReply({ ephemeral: true });
 
-    // ── Valida analista ──
-    const analistaMilitar = await ceobDb.militares.getByDiscord(interaction.user.id);
-    if (!analistaMilitar) {
-        return interaction.editReply('❌ Você não possui cadastro no sistema.');
-    }
+        const motivoDecisao = interaction.fields.getTextInputValue('motivo_decisao');
 
-    // ── Buscar requerimento antes de prosseguir ──
-    const requerimentoPreview = await ceobDb.requerimentos.buscarPorId(requerimentoId);
-    if (!requerimentoPreview) {
-        return interaction.editReply('❌ Requerimento não encontrado no banco de dados.');
-    }
-
-    // ── Se aprovação: capturar novos campos e validar OM e Patente ──
-    let nomeGuerraFinal = null;
-    let omSiglaFinal = null;
-    let patenteAbrevFinal = null;
-
-    if (isAprovacao) {
-        nomeGuerraFinal = interaction.fields.getTextInputValue('nome_guerra').trim();
-        omSiglaFinal = interaction.fields.getTextInputValue('om_destino').trim().toUpperCase();
-
-        try {
-            patenteAbrevFinal = interaction.fields.getTextInputValue('patente').trim().toUpperCase();
-        } catch (e) {
-            // Em caso de ser modal antigo ou problema lendo o campo, cai para null
+        // ── Valida analista ──
+        const analistaMilitar = await ceobDb.militares.getByDiscord(interaction.user.id);
+        if (!analistaMilitar) {
+            return interaction.editReply('❌ Você não possui cadastro no sistema.');
         }
 
-        if (!nomeGuerraFinal) {
-            return interaction.editReply('❌ O Nome de Guerra não pode estar vazio.');
+        // ── Buscar requerimento antes de prosseguir ──
+        const requerimentoPreview = await ceobDb.requerimentos.buscarPorId(requerimentoId);
+        if (!requerimentoPreview) {
+            return interaction.editReply('❌ Requerimento não encontrado no banco de dados.');
         }
 
-        if (!patenteAbrevFinal) {
-            return interaction.editReply('❌ A Patente não pode estar vazia.');
+        // ── Se aprovação: capturar novos campos e validar OM e Patente ──
+        let nomeGuerraFinal = null;
+        let omSiglaFinal = null;
+        let patenteAbrevFinal = null;
+
+        if (isAprovacao) {
+            nomeGuerraFinal = interaction.fields.getTextInputValue('nome_guerra').trim();
+            omSiglaFinal = interaction.fields.getTextInputValue('om_destino').trim().toUpperCase();
+
+            const embed = interaction.message.embeds[0];
+            const isRecrutamento = embed && embed.description && embed.description.includes('RECRUTAMENTO');
+
+            try {
+                patenteAbrevFinal = interaction.fields.getTextInputValue('patente').trim().toUpperCase();
+            } catch (e) {
+                if (isRecrutamento) {
+                    patenteAbrevFinal = 'REC';
+                }
+            }
+
+            if (!patenteAbrevFinal && isRecrutamento) {
+                patenteAbrevFinal = 'REC';
+            }
+
+            if (!nomeGuerraFinal) {
+                return interaction.editReply('❌ O Nome de Guerra não pode estar vazio.');
+            }
+
+            if (!patenteAbrevFinal) {
+                return interaction.editReply('❌ A Patente não pode estar vazia.');
+            }
+
+            // Validar que a OM e Patente existem no banco
+            const omExiste = await ceobDb.organizacoes.getBySigla(omSiglaFinal);
+            if (!omExiste) {
+                return interaction.editReply(`❌ OM com sigla **"${omSiglaFinal}"** não encontrada no sistema. Verifique a sigla e tente novamente.`);
+            }
+
+            const patenteExiste = await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal);
+            if (!patenteExiste) {
+                return interaction.editReply(`❌ Patente com abreviação **"${patenteAbrevFinal}"** não encontrada no sistema. Verifique a sigla e tente novamente.`);
+            }
+
+            // Atualizar o militar pendente com o novo nome de guerra, OM e Patente
+            await ceobDb.connection.query(
+                `UPDATE ceob.militares SET nome_guerra = $1, om_lotacao_id = $2, patente_id = $3, updated_at = NOW() WHERE id = $4`,
+                [nomeGuerraFinal, omExiste.id, patenteExiste.id, requerimentoPreview.militar_alvo_id]
+            );
         }
 
-        // Validar que a OM e Patente existem no banco
-        const omExiste = await ceobDb.organizacoes.getBySigla(omSiglaFinal);
-        if (!omExiste) {
-            return interaction.editReply(`❌ OM com sigla **"${omSiglaFinal}"** não encontrada no sistema. Verifique a sigla e tente novamente.`);
-        }
+        // ── Ativa militar e Integração Roblox (SE APROVADO) ──
+        let feedbackRoblox = '';
 
-        const patenteExiste = await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal);
-        if (!patenteExiste) {
-            return interaction.editReply(`❌ Patente com abreviação **"${patenteAbrevFinal}"** não encontrada no sistema. Verifique a sigla e tente novamente.`);
-        }
-
-        // Atualizar o militar pendente com o novo nome de guerra, OM e Patente
-        await ceobDb.connection.query(
-            `UPDATE ceob.militares SET nome_guerra = $1, om_lotacao_id = $2, patente_id = $3, updated_at = NOW() WHERE id = $4`,
-            [nomeGuerraFinal, omExiste.id, patenteExiste.id, requerimentoPreview.militar_alvo_id]
-        );
-    }
-
-    // ── Atualiza requerimento ──
-    const requerimento = await ceobDb.requerimentos.atualizar(requerimentoId, {
-        status: statusFinal,
-        analisadoPorId: analistaMilitar.id,
-        motivoDecisao,
-        timelineEventoId: null
-    });
-
-    if (!requerimento) {
-        return interaction.editReply('❌ Falha ao atualizar o requerimento.');
-    }
-
-    // ── Busca dados do alvo (agora com OM atualizada) ──
-    const dadosAlvo = await requerimentoService.buscarDadosMilitarAlvo(ceobDb, requerimento.militar_alvo_id);
-
-    // ── Ativa militar se aprovado ──
-    let feedbackRoblox = '';
-
-    if (isAprovacao) {
-        await requerimentoService.ativarMilitar(ceobDb, requerimento.militar_alvo_id);
-
-        // ── Integração Roblox: aceitar em grupos ──
-        try {
-            const robloxUserId = requerimentoPreview.dados_extras?.roblox_user_id;
+        if (isAprovacao) {
+            // ── Busca dados do alvo (agora com OM atualizada) ──
+            dadosAlvo = await requerimentoService.buscarDadosMilitarAlvo(ceobDb, requerimentoPreview.militar_alvo_id);
+            const robloxUserId = dadosAlvo?.robloxUserId || requerimentoPreview.dados_extras?.roblox_user_id;
 
             if (robloxUserId) {
                 // Passa o rank da patente para o Roblox Service
@@ -114,7 +110,26 @@ async function handleRequerimentoModal(interaction, ceobDb) {
                     const patenteFinal = await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal);
                     patenteRankNumber = patenteFinal ? patenteFinal.ordem_precedencia : null;
                 }
+
                 const resultadoRoblox = await robloxService.aceitarEmGrupos(robloxUserId, omSiglaFinal, patenteRankNumber);
+
+                const isRecrutamento = interaction.message.embeds[0]?.description?.includes('RECRUTAMENTO');
+
+                // VALIDAÇÃO RIGOROSA: Se for recrutamento e falhou no grupo principal ou da OM por falta de solicitação
+                if (isRecrutamento) {
+                    const resPrincipal = resultadoRoblox.resultados.find(r => r.grupo === robloxService.GRUPO_PRINCIPAL);
+                    if (resPrincipal && !resPrincipal.sucesso && resPrincipal.detalhe.includes('não enviou solicitação')) {
+                        return interaction.editReply(`❌ **Aprovação Cancelada:** O recrutado ainda não solicitou entrada no grupo principal do Roblox (${robloxService.GRUPO_PRINCIPAL}).\nPeça para ele solicitar a entrada e tente aprovar novamente.`);
+                    }
+
+                    const grupoOmId = robloxService.OM_GRUPO_MAP[omSiglaFinal];
+                    if (grupoOmId) {
+                        const resOm = resultadoRoblox.resultados.find(r => r.grupo === String(grupoOmId));
+                        if (resOm && !resOm.sucesso && resOm.detalhe.includes('não enviou solicitação')) {
+                            return interaction.editReply(`❌ **Aprovação Cancelada:** O recrutado ainda não solicitou entrada no subgrupo da OM **${omSiglaFinal}** (${grupoOmId}).\nPeça para ele solicitar a entrada e tente aprovar novamente.`);
+                        }
+                    }
+                }
 
                 // Montar feedback detalhado por grupo
                 const linhasFeedback = resultadoRoblox.resultados.map(r => {
@@ -133,72 +148,96 @@ async function handleRequerimentoModal(interaction, ceobDb) {
                     feedbackRoblox = `\n\n🟢 **Integração Roblox:**\n${linhasFeedback.join('\n')}`;
                 }
             } else {
-                feedbackRoblox = '\n\n⚠️ **Atenção:** Roblox User ID não encontrado nos dados do requerimento. A integração com grupos Roblox foi **pulada**.';
-                console.warn(`⚠️ Roblox User ID não encontrado nos dados extras do requerimento #${requerimentoId}. Integração com grupos pulada.`);
+                feedbackRoblox = '\n\n⚠️ **Atenção:** Roblox User ID não encontrado. A integração com grupos foi **pulada**.';
             }
-        } catch (err) {
-            feedbackRoblox = `\n\n❌ **Erro na integração Roblox:** ${err.message}`;
-            console.error(`❌ Erro na integração Roblox (requerimento #${requerimentoId}):`, err);
+
+            // Ativar apenas após passar pela validação do Roblox (se aplicável)
+            await requerimentoService.ativarMilitar(ceobDb, requerimentoPreview.militar_alvo_id);
         }
-    }
 
-    // ── Registra na timeline ──
-    const timelineEvento = await requerimentoService.registrarTimelineRequerimento(ceobDb, {
-        requerimentoId,
-        requerimento,
-        analistaId: analistaMilitar.id,
-        nomeMilitarAlvo: dadosAlvo.nomeGuerra,
-        motivoDecisao,
-        isAprovacao
-    });
+        // ── Atualiza requerimento ──
+        requerimento = await ceobDb.requerimentos.atualizar(requerimentoId, {
+            status: statusFinal,
+            analisadoPorId: analistaMilitar.id,
+            motivoDecisao,
+            timelineEventoId: null
+        });
 
-    // ── Gera e publica boletim ──
-    const conteudoBoletim = boletimService.gerarConteudoBoletim({
-        isAprovacao,
-        patenteNome: patenteAbrevFinal ? (await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal)).nome : dadosAlvo.patenteNome,
-        nomeGuerra: dadosAlvo.nomeGuerra,
-        omSigla: dadosAlvo.omSigla,
-        analistaMilitar,
-        motivoDecisao
-    });
+        if (!requerimento) {
+            return interaction.editReply('❌ Falha ao atualizar o requerimento.');
+        }
 
-    const boletim = await boletimService.criarEPublicarBoletim(ceobDb, interaction.client, {
-        conteudo: conteudoBoletim,
-        requerimentoId,
-        timelineEventoId: timelineEvento.id,
-        nomeMilitarAlvo: dadosAlvo.nomeGuerra,
-        analistaMilitar,
-        isAprovacao
-    });
+        // ── Busca dados finais do alvo ──
+        const dadosAlvoFinais = await requerimentoService.buscarDadosMilitarAlvo(ceobDb, requerimento.militar_alvo_id);
 
-    // ── Atualiza embed original ──
-    const embedAtualizado = criarEmbedDecisao({
-        embedOriginal: interaction.message.embeds[0],
-        analistaMilitar,
-        motivoDecisao,
-        boletim,
-        isAprovacao
-    });
+        // ── Registra na timeline ──
+        const timelineEvento = await requerimentoService.registrarTimelineRequerimento(ceobDb, {
+            requerimentoId,
+            requerimento,
+            analistaId: analistaMilitar.id,
+            nomeMilitarAlvo: dadosAlvoFinais.nomeGuerra,
+            motivoDecisao,
+            isAprovacao
+        });
 
-    await interaction.message.edit({ embeds: [embedAtualizado], components: [] });
+        // ── Gera e publica boletim ──
+        const conteudoBoletim = boletimService.gerarConteudoBoletim({
+            isAprovacao,
+            patenteNome: patenteAbrevFinal ? (await ceobDb.patentes.getByAbreviacao(patenteAbrevFinal)).nome : dadosAlvoFinais.patenteNome,
+            nomeGuerra: dadosAlvoFinais.nomeGuerra,
+            omSigla: dadosAlvoFinais.omSigla,
+            analistaMilitar,
+            motivoDecisao
+        });
 
-    // ── Limpa militar fantasma se indeferido ──
-    if (!isAprovacao && requerimento.militar_alvo_id) {
-        await requerimentoService.limparMilitarInativo(ceobDb, requerimentoId, requerimento.militar_alvo_id);
-    }
+        const boletim = await boletimService.criarEPublicarBoletim(ceobDb, interaction.client, {
+            conteudo: conteudoBoletim,
+            requerimentoId,
+            timelineEventoId: timelineEvento.id,
+            nomeMilitarAlvo: dadosAlvoFinais.nomeGuerra,
+            analistaMilitar,
+            isAprovacao
+        });
 
-    // ── Resposta final ──
-    const verbo = isAprovacao ? 'aprovado' : 'indeferido';
+        // ── Atualiza embed original ──
+        const embedAtualizado = criarEmbedDecisao({
+            embedOriginal: interaction.message.embeds[0],
+            analistaMilitar,
+            motivoDecisao,
+            boletim,
+            isAprovacao
+        });
 
-    if (isAprovacao) {
-        await interaction.editReply(
-            `✅ Requerimento **#${requerimentoId}** ${verbo}. O militar **${dadosAlvo.nomeGuerra}** foi ativado na OM **${omSiglaFinal}**. Boletim **${boletim.numero}** publicado.${feedbackRoblox}`
-        );
-    } else {
-        const complemento = 'O registro pendente foi removido';
-        await interaction.editReply(
-            `❌ Requerimento **#${requerimentoId}** ${verbo}. ${complemento} e o boletim **${boletim.numero}** foi publicado.`
-        );
+        await interaction.message.edit({ embeds: [embedAtualizado], components: [] });
+
+        // ── Limpa militar fantasma se indeferido ──
+        if (!isAprovacao && requerimento.militar_alvo_id) {
+            await requerimentoService.limparMilitarInativo(ceobDb, requerimentoId, requerimento.militar_alvo_id);
+        }
+
+        // ── Resposta final ──
+        if (isAprovacao) {
+            await interaction.editReply(
+                `✅ Requerimento **#${requerimentoId}** aprovado. O militar **${dadosAlvoFinais.nomeGuerra}** foi ativado na OM **${omSiglaFinal}**. Boletim **${boletim.numero}** publicado.${feedbackRoblox}`
+            );
+        } else {
+            const complemento = 'O registro pendente foi removido';
+            await interaction.editReply(
+                `❌ Requerimento **#${requerimentoId}** indeferido. ${complemento} e o boletim **${boletim.numero}** foi publicado.`
+            );
+        }
+
+    } catch (error) {
+        console.error('Erro ao processar modal de requerimento:', error);
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply('❌ Ocorreu um erro interno ao processar a decisão do requerimento.');
+            } else {
+                await interaction.reply({ content: '❌ Ocorreu um erro interno ao processar a decisão do requerimento.', ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('Falha ao enviar resposta de erro:', replyErr);
+        }
     }
 }
 

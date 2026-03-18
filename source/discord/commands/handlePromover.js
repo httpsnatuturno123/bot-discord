@@ -6,28 +6,28 @@ const robloxService = require('../services/robloxService');
  * @param {import('../../database/CeobDatabase')} ceobDb
  */
 async function handlePromover(interaction, ceobDb) {
-    await interaction.deferReply();
-
-    const executorDiscordId = interaction.user.id;
-    const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
-
-    if (!executorMilitar) {
-        return interaction.editReply('❌ Você não possui cadastro no sistema ou está inativo.');
-    }
-
-    // 1. Verificar se o executor é Oficial (ordem_precedencia <= 11)
-    if (executorMilitar.ordem_precedencia > 11) {
-        return interaction.editReply('❌ Apenas Oficiais podem utilizar este comando.');
-    }
-
-    const isAltoComando = await ceobDb.permissoes.isAltoComando(executorMilitar.id);
-
-    // 2. Capturar parâmetros
-    const alvoInput = interaction.options.getString('alvo_identificador').trim();
-    const novaPatenteAbrev = interaction.options.getString('nova_patente').toUpperCase();
-    const robloxRank = interaction.options.getInteger('roblox_rank');
-
     try {
+        await interaction.deferReply();
+
+        const executorDiscordId = interaction.user.id;
+        const executorMilitar = await ceobDb.militares.getByDiscord(executorDiscordId);
+
+        if (!executorMilitar) {
+            return interaction.editReply('❌ Você não possui cadastro no sistema ou está inativo.');
+        }
+
+        // 1. Verificar se o executor é Oficial (ordem_precedencia <= 11)
+        if (executorMilitar.ordem_precedencia > 11) {
+            return interaction.editReply('❌ Apenas Oficiais podem utilizar este comando.');
+        }
+
+        const isAltoComando = await ceobDb.permissoes.isAltoComando(executorMilitar.id);
+
+        // 2. Capturar parâmetros
+        const alvoInput = interaction.options.getString('alvo_identificador').trim();
+        const novaPatenteAbrev = interaction.options.getString('nova_patente').toUpperCase();
+        const robloxRank = interaction.options.getInteger('roblox_rank');
+
         // 3. Resolver ID do Roblox e buscar alvo
         let robloxId = alvoInput;
 
@@ -134,10 +134,16 @@ async function handlePromover(interaction, ceobDb) {
 
     } catch (error) {
         console.error('Erro no comando promover:', error);
-        if (error.name === 'RobloxError') {
-            return interaction.editReply(`❌ **Erro no Roblox:** ${error.message}`);
+        const msg = error.name === 'RobloxError' ? `❌ **Erro no Roblox:** ${error.message}` : '❌ Ocorreu um erro interno ao processar a promoção.';
+        try {
+            if (interaction.deferred || interaction.replied) {
+                await interaction.editReply(msg);
+            } else {
+                await interaction.reply({ content: msg, ephemeral: true });
+            }
+        } catch (replyErr) {
+            console.error('Falha ao enviar resposta de erro:', replyErr);
         }
-        return interaction.editReply('❌ Ocorreu um erro interno ao processar a promoção.');
     }
 }
 

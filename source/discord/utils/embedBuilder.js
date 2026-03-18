@@ -13,7 +13,7 @@ function criarEmbedBoletim({ boletim, requerimentoId, nomeMilitarAlvo, analistaM
         color: cor,
         fields: [
             { name: '🆔 Protocolo', value: `#${requerimentoId}`, inline: true },
-            { name: '🎖️ Recruta', value: nomeMilitarAlvo, inline: true },
+            { name: '🎖️ Militar', value: nomeMilitarAlvo, inline: true },
             { name: '✍️ Analisado por', value: `${analistaMilitar.patente_abrev} ${analistaMilitar.nome_guerra}`, inline: true }
         ],
         footer: { text: 'DGP — Departamento Geral do Pessoal' },

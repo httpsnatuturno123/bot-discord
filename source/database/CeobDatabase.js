@@ -13,6 +13,9 @@ const PermissoesHandle = require('./handles/permissoes');
 const FichaHandle = require('./handles/ficha');
 const RequerimentoRecrutamentoHandle = require('./handles/requerimentoRecrutamento');
 const RequerimentoListagemHandle = require('./handles/requerimentoListagem');
+const CatalogoCursosHandle = require('./handles/catalogoCursos');
+const TurmasHandle = require('./handles/turmas');
+const MilitarCursosHandle = require('./handles/militarCursos');
 
 class CeobDatabase {
     constructor(databaseUrl) {
@@ -31,6 +34,10 @@ class CeobDatabase {
         this.ficha = new FichaHandle(this.connection, this.funcoes, this.timeline);
         this.requerimentoRecrutamento = new RequerimentoRecrutamentoHandle(this.connection);
         this.requerimentoListagem = new RequerimentoListagemHandle(this.connection);
+        this.catalogoCursos = new CatalogoCursosHandle(this.connection);
+        this.turmas = new TurmasHandle(this.connection);
+        this.cursos = this.turmas; // Alias de retrocompatibilidade
+        this.militarCursos = new MilitarCursosHandle(this.connection);
     }
 
     async init() {
